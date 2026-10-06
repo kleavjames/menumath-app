@@ -10,13 +10,13 @@ import { Text } from "./Text";
 
 interface ButtonProps extends Omit<PressableProps, "children" | "style"> {
   children: string;
-  variant?: "primary";
+  variant?: "fill" | "outline";
   style?: StyleProp<ViewStyle>;
 }
 
 export const Button = ({
   children,
-  variant,
+  variant = "fill",
   disabled,
   style,
   ...props
@@ -48,15 +48,18 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: "center",
     alignSelf: "stretch",
     borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
     paddingVertical: theme.gap(2),
     paddingHorizontal: theme.gap(3),
     variants: {
       variant: {
-        default: {
+        fill: {
           backgroundColor: theme.colors.text,
+          borderColor: theme.colors.text,
         },
-        primary: {
-          backgroundColor: theme.colors.text,
+        outline: {
+          backgroundColor: "transparent",
+          borderColor: theme.colors.text,
         },
       },
       disabled: {
@@ -73,8 +76,17 @@ const styles = StyleSheet.create((theme) => ({
     opacity: 0.85,
   },
   label: {
-    color: theme.colors.background,
     fontSize: theme.fontSize.md,
     fontFamily: theme.fontFamily.semiBold,
+    variants: {
+      variant: {
+        fill: {
+          color: theme.colors.background,
+        },
+        outline: {
+          color: theme.colors.text,
+        },
+      },
+    },
   },
 }));

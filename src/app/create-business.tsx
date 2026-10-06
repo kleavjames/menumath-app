@@ -11,6 +11,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Pill, Stepper, StepperInput, Text } from "@/components/atoms";
 import { BackButton, SelectInput, TextInput } from "@/components/molecules";
+import { router } from "expo-router";
 
 const BUSINESS_TYPES = [
   "Café",
@@ -68,8 +69,10 @@ const CreateBusiness = () => {
     return Object.keys(next).length === 0;
   };
 
+  // TODO:
   const handleContinue = () => {
-    if (!validate()) return;
+    router.push("/invite-members");
+    // if (!validate()) return;
     // TODO: continue to step 2
   };
 

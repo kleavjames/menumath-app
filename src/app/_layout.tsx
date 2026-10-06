@@ -45,6 +45,10 @@ export default function RootLayout() {
             name="create-business"
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="invite-members"
+            options={{ headerShown: false }}
+          />
         </Stack>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
