@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Text } from "@/components/atoms";
 import { BackButton, TextInput } from "@/components/molecules";
+import { router } from "expo-router";
 
 type FieldErrors = {
   fullName?: string;
@@ -47,8 +48,10 @@ const SignUp = () => {
     return Object.keys(next).length === 0;
   };
 
+  // TODO:
   const handleCreateAccount = () => {
-    if (!validate()) return;
+    router.push("/create-business");
+    // if (!validate()) return;
     // TODO: submit signup
   };
 

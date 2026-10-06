@@ -1,18 +1,44 @@
-import { View, type StyleProp, type ViewStyle } from "react-native";
+import {
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
 import { Text } from "./Text";
 
-interface PillProps {
+interface PillProps extends Omit<PressableProps, "children" | "style"> {
   children: string;
+  selected?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export const Pill = ({ children, style }: PillProps) => {
+export const Pill = ({
+  children,
+  selected = false,
+  disabled,
+  style,
+  ...props
+}: PillProps) => {
+  styles.useVariants({
+    selected,
+  });
+
   return (
-    <View style={[styles.pill, style]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.pill,
+        pressed && !disabled && styles.pressed,
+        style,
+      ]}
+      {...props}
+    >
       <Text style={styles.label}>{children}</Text>
-    </View>
+    </Pressable>
   );
 };
 
@@ -24,11 +50,35 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: 9999,
     paddingVertical: theme.gap(1),
     paddingHorizontal: theme.gap(2),
-    backgroundColor: theme.colors.text,
+    borderWidth: 1,
+    variants: {
+      selected: {
+        true: {
+          backgroundColor: theme.colors.text,
+          borderColor: theme.colors.text,
+        },
+        false: {
+          backgroundColor: theme.colors.background,
+          borderColor: theme.colors.border,
+        },
+      },
+    },
+  },
+  pressed: {
+    opacity: 0.85,
   },
   label: {
-    color: theme.colors.background,
     fontSize: theme.fontSize.sm,
     fontFamily: theme.fontFamily.medium,
+    variants: {
+      selected: {
+        true: {
+          color: theme.colors.background,
+        },
+        false: {
+          color: theme.colors.text,
+        },
+      },
+    },
   },
 }));
