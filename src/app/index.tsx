@@ -23,7 +23,7 @@ const SignIn = () => {
       style={[
         styles.screen,
         {
-          paddingTop: insets.top,
+          paddingTop: insets.top + 16,
           paddingBottom: insets.bottom,
         },
       ]}

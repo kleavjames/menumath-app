@@ -77,7 +77,7 @@ const CreateBusiness = () => {
   };
 
   const handleEnterInviteCode = () => {
-    // TODO: navigate to invite code flow
+    router.push("/invite-code");
   };
 
   return (

@@ -49,6 +49,7 @@ export default function RootLayout() {
             name="invite-members"
             options={{ headerShown: false }}
           />
+          <Stack.Screen name="invite-code" options={{ headerShown: false }} />
         </Stack>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

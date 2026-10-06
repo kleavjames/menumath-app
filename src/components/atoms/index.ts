@@ -2,6 +2,7 @@ export * from "./Button";
 export * from "./Card";
 export * from "./Input";
 export * from "./Pill";
+export * from "./PinCode";
 export * from "./Select";
 export * from "./Stepper";
 export * from "./StepperInput";
