@@ -27,6 +27,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       bundleIdentifier: "com.kleavantjames.menumath",
       icon: "./assets/expo.icon",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
     },
     android: {
       package: "com.kleavantjames.menumath",
