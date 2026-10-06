@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -90,7 +91,11 @@ const SignIn = () => {
 
       <Text variant="label" color="textSecondary" style={styles.footer}>
         New to MenuMath?{" "}
-        <Text variant="label" style={styles.link} onPress={() => {}}>
+        <Text
+          variant="label"
+          style={styles.link}
+          onPress={() => router.push("/signup")}
+        >
           Create an account
         </Text>
       </Text>
