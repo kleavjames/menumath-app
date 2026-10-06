@@ -1,4 +1,5 @@
 import { SymbolView } from "expo-symbols";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -194,7 +195,7 @@ export default function SettingsScreen() {
               pressed && styles.rowPressed,
             ]}
             onPress={() => {
-              // TODO: sign out
+              router.replace("/");
             }}
           >
             <Text color="error">Sign out</Text>
