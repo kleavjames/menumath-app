@@ -1,9 +1,18 @@
 :root {
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
+  --font-display: 'OpenSans-Regular', ui-sans-serif, system-ui, sans-serif;
+  --font-display-italic: 'OpenSans-Italic', ui-sans-serif, system-ui, sans-serif;
+  --font-display-light: 'OpenSans-Light', ui-sans-serif, system-ui, sans-serif;
+  --font-display-light-italic: 'OpenSans-LightItalic', ui-sans-serif, system-ui, sans-serif;
+  --font-display-medium: 'OpenSans-Medium', ui-sans-serif, system-ui, sans-serif;
+  --font-display-medium-italic: 'OpenSans-MediumItalic', ui-sans-serif, system-ui, sans-serif;
+  --font-display-semibold: 'OpenSans-SemiBold', ui-sans-serif, system-ui, sans-serif;
+  --font-display-semibold-italic: 'OpenSans-SemiBoldItalic', ui-sans-serif, system-ui, sans-serif;
+  --font-display-bold: 'OpenSans-Bold', ui-sans-serif, system-ui, sans-serif;
+  --font-display-bold-italic: 'OpenSans-BoldItalic', ui-sans-serif, system-ui, sans-serif;
+  --font-display-extrabold: 'OpenSans-ExtraBold', ui-sans-serif, system-ui, sans-serif;
+  --font-display-extrabold-italic: 'OpenSans-ExtraBoldItalic', ui-sans-serif, system-ui, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
+  --font-rounded: 'OpenSans-Regular', ui-sans-serif, system-ui, sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
