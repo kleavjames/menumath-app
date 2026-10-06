@@ -15,6 +15,7 @@ interface SelectInputProps {
   onSelect: (value: string) => void;
   placeholder?: string;
   error?: string | null;
+  snapPointsArr?: string[];
 }
 
 export const SelectInput = ({
@@ -24,6 +25,7 @@ export const SelectInput = ({
   onSelect,
   placeholder = "Select…",
   error,
+  snapPointsArr,
 }: SelectInputProps) => {
   const selectedOption = options.find((option) => option.value === value);
   const displayText = selectedOption?.label ?? placeholder;
@@ -37,7 +39,12 @@ export const SelectInput = ({
       <Text variant="label" color={error ? "error" : "textSecondary"}>
         {label}
       </Text>
-      <Select options={options} selected={value} onSelect={onSelect}>
+      <Select
+        options={options}
+        selected={value}
+        onSelect={onSelect}
+        snapPointsArr={snapPointsArr}
+      >
         <View style={styles.trigger}>
           <Text
             style={styles.value}

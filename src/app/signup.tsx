@@ -60,8 +60,8 @@ const SignUp = () => {
       style={[
         styles.screen,
         {
-          paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom + 16,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
         },
       ]}
     >
@@ -90,6 +90,7 @@ const SignUp = () => {
                 setFullName(value);
                 clearError("fullName");
               }}
+              placeholder="Your full name"
               autoCapitalize="words"
               autoComplete="name"
               textContentType="name"
@@ -103,6 +104,7 @@ const SignUp = () => {
                 clearError("username");
               }}
               keyboardType="default"
+              placeholder="Your username"
               autoCapitalize="none"
               autoComplete="username"
               textContentType="username"
@@ -115,6 +117,7 @@ const SignUp = () => {
                 setPassword(value);
                 clearError("password");
               }}
+              placeholder="Your password"
               secureTextEntry
               autoComplete="new-password"
               textContentType="newPassword"

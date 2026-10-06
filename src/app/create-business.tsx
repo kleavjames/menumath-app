@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Pill, Stepper, StepperInput, Text } from "@/components/atoms";
-import { SelectInput, TextInput } from "@/components/molecules";
+import { BackButton, SelectInput, TextInput } from "@/components/molecules";
 
 const BUSINESS_TYPES = [
   "Café",
@@ -82,8 +82,8 @@ const CreateBusiness = () => {
       style={[
         styles.screen,
         {
-          paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom + 16,
+          paddingTop: insets.top,
+          marginBottom: insets.bottom,
         },
       ]}
     >
@@ -96,6 +96,7 @@ const CreateBusiness = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <BackButton />
           <Stepper current={1} total={2} />
 
           <View style={styles.hero}>
@@ -115,7 +116,7 @@ const CreateBusiness = () => {
                 setBusinessName(value);
                 clearError("businessName");
               }}
-              placeholder="e.g. Lark & Crumb"
+              placeholder="Your business name"
               autoCapitalize="words"
               autoComplete="organization"
               textContentType="organizationName"
@@ -154,6 +155,7 @@ const CreateBusiness = () => {
               label="Currency"
               options={CURRENCY_OPTIONS}
               value={currency}
+              snapPointsArr={["25%", "50%"]}
               onSelect={setCurrency}
             />
 

@@ -1,4 +1,9 @@
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  type BottomSheetBackdropProps,
+} from "@gorhom/bottom-sheet";
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +21,7 @@ type SelectProps = {
   selected?: string;
   onSelect: (value: string) => void;
   children: ReactNode;
+  snapPointsArr?: string[];
 };
 
 export const Select = ({
@@ -23,10 +29,23 @@ export const Select = ({
   selected,
   onSelect,
   children,
+  snapPointsArr = ["25%", "50%", "90%"],
 }: SelectProps) => {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const snapPoints = useMemo(() => snapPointsArr, [snapPointsArr]);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   const handleSelect = useCallback(
     (value: string) => {
@@ -59,7 +78,12 @@ export const Select = ({
         {children}
       </Pressable>
 
-      <BottomSheetModal ref={sheetRef} snapPoints={snapPoints}>
+      <BottomSheetModal
+        ref={sheetRef}
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backdropComponent={renderBackdrop}
+      >
         <BottomSheetScrollView
           contentContainerStyle={{ paddingBottom: insets.bottom }}
         >

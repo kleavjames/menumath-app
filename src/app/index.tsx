@@ -23,8 +23,8 @@ const SignIn = () => {
       style={[
         styles.screen,
         {
-          paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + 16,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
         },
       ]}
     >
@@ -57,6 +57,7 @@ const SignIn = () => {
             <TextInput
               label="Username"
               value={username}
+              placeholder="Your username"
               onChangeText={setUsername}
               keyboardType="default"
               autoCapitalize="none"
@@ -67,6 +68,7 @@ const SignIn = () => {
               <TextInput
                 label="Password"
                 value={password}
+                placeholder="Your password"
                 onChangeText={setPassword}
                 secureTextEntry
                 autoComplete="password"
