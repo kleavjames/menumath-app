@@ -1,61 +1,51 @@
+import { StyleSheet } from "react-native-unistyles";
+
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * MenuMath palette
+ * Primary: splash brand blue (#208AEF) — clear, numeric, trustworthy
+ * Secondary: warm amber — food pricing / margin energy without fighting the blue
  */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+const lightTheme = {
+  colors: {
+    primary: "#208AEF",
+    secondary: "#E89B2D",
   },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
-} as const;
+  gap: (v: number) => v * 8,
+};
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+const darkTheme = {
+  colors: {
+    primary: "#4BA3F5",
+    secondary: "#F0B14A",
+  },
+  gap: (v: number) => v * 8,
+};
 
-export const Fonts = Platform.select({
-  ios: {
-    sans: 'OpenSans-Regular',
-    serif: 'ui-serif',
-    rounded: 'OpenSans-Regular',
-    mono: 'ui-monospace',
+const appThemes = {
+  light: lightTheme,
+  dark: darkTheme,
+};
+
+const breakpoints = {
+  xs: 0,
+  sm: 300,
+  md: 500,
+  lg: 800,
+  xl: 1200,
+};
+
+type AppBreakpoints = typeof breakpoints;
+type AppThemes = typeof appThemes;
+
+declare module "react-native-unistyles" {
+  export interface UnistylesThemes extends AppThemes {}
+  export interface UnistylesBreakpoints extends AppBreakpoints {}
+}
+
+StyleSheet.configure({
+  settings: {
+    adaptiveThemes: true,
   },
-  default: {
-    sans: 'OpenSans-Regular',
-    serif: 'serif',
-    rounded: 'OpenSans-Regular',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
+  breakpoints,
+  themes: appThemes,
 });
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
