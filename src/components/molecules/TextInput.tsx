@@ -5,16 +5,23 @@ import { Input, Text } from "@/components/atoms";
 
 interface TextInputProps extends RNTextInputProps {
   label: string;
-  state?: "error";
+  error?: string | null;
 }
 
-export const TextInput = ({ label, state, ...props }: TextInputProps) => {
+export const TextInput = ({ label, error, ...props }: TextInputProps) => {
+  const state = error ? "error" : undefined;
+
   return (
     <View style={styles.container}>
-      <Text variant="label" color="textSecondary">
+      <Text variant="label" color={error ? "error" : "textSecondary"}>
         {label}
       </Text>
       <Input state={state} {...props} />
+      {error ? (
+        <Text variant="caption" color="error">
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };

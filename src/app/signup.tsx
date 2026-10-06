@@ -6,11 +6,51 @@ import { StyleSheet } from "react-native-unistyles";
 import { Button, Text } from "@/components/atoms";
 import { BackButton, TextInput } from "@/components/molecules";
 
+type FieldErrors = {
+  fullName?: string;
+  username?: string;
+  password?: string;
+};
+
 const SignUp = () => {
   const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const clearError = (field: keyof FieldErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validate = (): boolean => {
+    const next: FieldErrors = {};
+
+    if (!fullName.trim()) {
+      next.fullName = "Full name is required";
+    }
+    if (!username.trim()) {
+      next.username = "Username is required";
+    }
+    if (!password) {
+      next.password = "Password is required";
+    } else if (password.length < 8) {
+      next.password = "Password must be at least 8 characters";
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleCreateAccount = () => {
+    if (!validate()) return;
+    // TODO: submit signup
+  };
 
   return (
     <View
@@ -43,32 +83,43 @@ const SignUp = () => {
             <TextInput
               label="Full name"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(value) => {
+                setFullName(value);
+                clearError("fullName");
+              }}
               autoCapitalize="words"
               autoComplete="name"
               textContentType="name"
+              error={errors.fullName}
             />
             <TextInput
               label="Username"
               value={username}
-              onChangeText={setUsername}
+              onChangeText={(value) => {
+                setUsername(value);
+                clearError("username");
+              }}
               keyboardType="default"
               autoCapitalize="none"
               autoComplete="username"
               textContentType="username"
+              error={errors.username}
             />
             <TextInput
               label="Password"
-              placeholder="At least 8 characters"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                clearError("password");
+              }}
               secureTextEntry
               autoComplete="new-password"
               textContentType="newPassword"
+              error={errors.password}
             />
           </View>
 
-          <Button onPress={() => {}}>Create account</Button>
+          <Button onPress={handleCreateAccount}>Create account</Button>
         </ScrollView>
       </KeyboardAvoidingView>
 
