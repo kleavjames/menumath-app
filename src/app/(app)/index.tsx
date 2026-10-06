@@ -1,10 +1,6 @@
 import { SymbolView } from "expo-symbols";
 import { useMemo, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -186,10 +182,18 @@ export default function RecipesScreen() {
 
         <View style={styles.listSection}>
           <View style={styles.columnHeaders}>
-            <Text variant="caption" color="textSecondary" style={styles.columnLabel}>
+            <Text
+              variant="caption"
+              color="textSecondary"
+              style={styles.columnLabel}
+            >
               Recipe
             </Text>
-            <Text variant="caption" color="textSecondary" style={styles.columnLabel}>
+            <Text
+              variant="caption"
+              color="textSecondary"
+              style={styles.columnLabel}
+            >
               Cost / serving
             </Text>
           </View>
