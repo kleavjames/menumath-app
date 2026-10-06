@@ -1,13 +1,13 @@
 import "@/global.css";
 
 import { useFonts } from "expo-font";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync();
 
-export default function Layout() {
+export default function RootLayout() {
   const [loaded, error] = useFonts({
     "OpenSans-Italic": require("../../assets/fonts/OpenSans-Italic.ttf"),
     "OpenSans-Light": require("../../assets/fonts/OpenSans-Light.ttf"),
@@ -34,15 +34,8 @@ export default function Layout() {
   }
 
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" renderingMode="template" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="globe.fill" renderingMode="template" />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+    </Stack>
   );
 }
