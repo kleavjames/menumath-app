@@ -87,7 +87,7 @@ const SignIn = () => {
             </View>
           </View>
 
-          <Button onPress={() => {}}>Sign in</Button>
+          <Button onPress={() => router.push("/(app)")}>Sign in</Button>
         </ScrollView>
       </KeyboardAvoidingView>
 
