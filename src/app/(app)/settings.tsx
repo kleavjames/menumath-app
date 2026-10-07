@@ -1,5 +1,5 @@
-import { SymbolView } from "expo-symbols";
 import { router } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,9 +40,7 @@ const SettingsRow = ({
       </View>
       <View style={styles.rowTrailing}>
         {trailing ??
-          (value ? (
-            <Text color="textSecondary">{value}</Text>
-          ) : null)}
+          (value ? <Text color="textSecondary">{value}</Text> : null)}
         {showChevron ? (
           <UniChevron
             name={{
@@ -127,7 +125,11 @@ export default function SettingsScreen() {
         </Card>
 
         <View style={styles.section}>
-          <Text variant="caption" color="textSecondary" style={styles.sectionLabel}>
+          <Text
+            variant="caption"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
             Business
           </Text>
           <Card style={styles.listCard}>
@@ -150,7 +152,11 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text variant="caption" color="textSecondary" style={styles.sectionLabel}>
+          <Text
+            variant="caption"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
             Costing
           </Text>
           <Card style={styles.listCard}>
@@ -195,7 +201,7 @@ export default function SettingsScreen() {
               pressed && styles.rowPressed,
             ]}
             onPress={() => {
-              router.replace("/");
+              router.replace("/signin");
             }}
           >
             <Text color="error">Sign out</Text>

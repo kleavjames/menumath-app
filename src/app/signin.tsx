@@ -14,11 +14,46 @@ import { Button, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
 import { useAuth } from "../../provider/AuthProvider";
 
+type FieldErrors = {
+  username?: string;
+  password?: string;
+};
+
 const SignIn = () => {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const clearError = (field: keyof FieldErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validate = (): boolean => {
+    const next: FieldErrors = {};
+
+    if (!username.trim()) {
+      next.username = "Username is required";
+    }
+
+    if (!password.trim()) {
+      next.password = "Password is required";
+    }
+
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSignIn = () => {
+    if (!validate()) return;
+    // login(username, password);
+  };
 
   return (
     <View
@@ -60,21 +95,29 @@ const SignIn = () => {
               label="Username"
               value={username}
               placeholder="Your username"
-              onChangeText={setUsername}
+              onChangeText={(value) => {
+                setUsername(value);
+                clearError("username");
+              }}
               keyboardType="default"
               autoCapitalize="none"
               autoComplete="username"
               textContentType="username"
+              error={errors.username}
             />
             <View style={styles.passwordBlock}>
               <TextInput
                 label="Password"
                 value={password}
                 placeholder="Your password"
-                onChangeText={setPassword}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  clearError("password");
+                }}
                 secureTextEntry
                 autoComplete="password"
                 textContentType="password"
+                error={errors.password}
               />
               <Pressable
                 accessibilityRole="link"
@@ -89,7 +132,7 @@ const SignIn = () => {
             </View>
           </View>
 
-          <Button onPress={() => router.push("/(app)")}>Sign in</Button>
+          <Button onPress={handleSignIn}>Sign in</Button>
         </ScrollView>
       </KeyboardAvoidingView>
 
