@@ -1,25 +1,21 @@
 import { SymbolView } from "expo-symbols";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Pill, Text } from "@/components/atoms";
+import { Card, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
+import { Categories } from "@/components/organisms";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
 
-const CATEGORIES = ["All", "Produce", "Dairy", "Dry goods", "Oils"] as const;
-
-type CategoryFilter = (typeof CATEGORIES)[number];
-type IngredientCategory = Exclude<CategoryFilter, "All">;
-
 type Ingredient = {
   id: string;
   name: string;
-  category: IngredientCategory;
+  category: string;
   packSize: number;
   unit: string;
   supplier: string;
@@ -176,7 +172,8 @@ const formatUnitCost = (ingredient: Ingredient) =>
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("All");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [category, setCategory] = useState("All");
 
   const filteredIngredients = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -194,6 +191,26 @@ export default function IngredientsScreen() {
     });
   }, [category, query]);
 
+  const handleCreateCategory = (name: string) => {
+    setCategories((prev) => [...prev, name]);
+  };
+
+  const handleRenameCategory = (from: string, to: string) => {
+    setCategories((prev) =>
+      prev.map((item) => (item === from ? to : item)),
+    );
+    if (category === from) {
+      setCategory(to);
+    }
+  };
+
+  const handleDeleteCategory = (name: string) => {
+    setCategories((prev) => prev.filter((item) => item !== name));
+    if (category === name) {
+      setCategory("All");
+    }
+  };
+
   return (
     <View
       style={[
@@ -207,7 +224,9 @@ export default function IngredientsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={Keyboard.dismiss}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -243,21 +262,14 @@ export default function IngredientsScreen() {
           placeholder="Search ingredients or suppliers"
         />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filters}
-        >
-          {CATEGORIES.map((item) => (
-            <Pill
-              key={item}
-              selected={category === item}
-              onPress={() => setCategory(item)}
-            >
-              {item}
-            </Pill>
-          ))}
-        </ScrollView>
+        <Categories
+          categories={categories}
+          selected={category}
+          onSelect={setCategory}
+          onCreate={handleCreateCategory}
+          onRename={handleRenameCategory}
+          onDelete={handleDeleteCategory}
+        />
 
         <View style={styles.listSection}>
           <View style={styles.columnHeaders}>
@@ -360,11 +372,6 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.background,
     fontSize: theme.fontSize.sm,
     fontFamily: theme.fontFamily.semiBold,
-  },
-  filters: {
-    flexDirection: "row",
-    gap: theme.gap(1),
-    paddingRight: theme.gap(1),
   },
   listSection: {
     gap: theme.gap(1.5),
