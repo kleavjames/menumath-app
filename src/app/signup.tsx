@@ -6,6 +6,7 @@ import { StyleSheet } from "react-native-unistyles";
 import { Button, Text } from "@/components/atoms";
 import { BackButton, TextInput } from "@/components/molecules";
 import { router } from "expo-router";
+import { useCreateAccountStore } from "../../store/createAccount";
 
 type FieldErrors = {
   fullName?: string;
@@ -19,6 +20,8 @@ const SignUp = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  const setAccount = useCreateAccountStore((state) => state.setAccount);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -48,11 +51,10 @@ const SignUp = () => {
     return Object.keys(next).length === 0;
   };
 
-  // TODO:
   const handleCreateAccount = () => {
+    if (!validate()) return;
+    setAccount({ fullName, username, password });
     router.push("/create-business");
-    // if (!validate()) return;
-    // TODO: submit signup
   };
 
   return (

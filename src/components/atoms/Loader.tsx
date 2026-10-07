@@ -42,12 +42,10 @@ export const Loader: React.FC<LoaderProps> = ({ visible, text }) => {
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.backdrop}>
         <Animated.View style={[styles.loaderContainer, animatedStyle]}>
-          <View className="pt-6 pb-5 px-6">
-            <ActivityIndicator size="large" />
-            <Text className="text-white md:text-lg text-center pt-2">
-              {text || "Loading..."}
-            </Text>
-          </View>
+          <ActivityIndicator size="large" />
+          <Text variant="body" style={styles.text} numberOfLines={1}>
+            {text || "Loading..."}
+          </Text>
         </Animated.View>
       </View>
     </Modal>
@@ -64,9 +62,16 @@ const styles = StyleSheet.create((theme) => ({
   loaderContainer: {
     minWidth: 120,
     minHeight: 120,
+    paddingHorizontal: theme.gap(3),
+    paddingVertical: theme.gap(2.5),
     borderRadius: 12,
     backgroundColor: theme.colors.background,
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: "center",
+  },
+  text: {
+    textAlign: "center",
+    marginTop: theme.gap(1),
   },
 }));
