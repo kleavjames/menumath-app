@@ -7,9 +7,14 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories } from "@/components/organisms";
-import { getCategories } from "../../../service/api/categories";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  updateCategory,
+} from "../../../service/api/categories";
 import { useAccountUserStore } from "../../../store/accountUser";
-import { CategoryType } from "../../../types/business";
+import { Category, CategoryType } from "../../../types/business";
 import { ApiError } from "../../../types/common";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
@@ -26,6 +31,13 @@ type Ingredient = {
   unitCost: number;
   packPrice: number;
 };
+
+export type IngredientCategory = Omit<
+  Category,
+  "type" | "businessId" | "createdAt" | "updatedAt"
+>;
+
+const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 
 const INGREDIENTS: Ingredient[] = [
   {
@@ -58,106 +70,6 @@ const INGREDIENTS: Ingredient[] = [
     unitCost: 1.3,
     packPrice: 5.2,
   },
-  {
-    id: "4",
-    name: "Free-range eggs",
-    category: "Dairy",
-    packSize: 30,
-    unit: "each",
-    supplier: "Hilltop Farm",
-    unitCost: 0.33,
-    packPrice: 9.9,
-  },
-  {
-    id: "5",
-    name: "Caster sugar",
-    category: "Dry goods",
-    packSize: 5,
-    unit: "kg",
-    supplier: "Metro Wholesale",
-    unitCost: 1.48,
-    packPrice: 7.4,
-  },
-  {
-    id: "6",
-    name: "San Marzano tomatoes",
-    category: "Produce",
-    packSize: 2.5,
-    unit: "kg",
-    supplier: "Caputo Direct",
-    unitCost: 3.56,
-    packPrice: 8.9,
-  },
-  {
-    id: "7",
-    name: "Fior di latte",
-    category: "Dairy",
-    packSize: 1,
-    unit: "kg",
-    supplier: "Latteria Rossi",
-    unitCost: 14.6,
-    packPrice: 14.6,
-  },
-  {
-    id: "8",
-    name: "Extra virgin olive oil",
-    category: "Oils",
-    packSize: 5,
-    unit: "L",
-    supplier: "Metro Wholesale",
-    unitCost: 8.4,
-    packPrice: 42,
-  },
-  {
-    id: "9",
-    name: "Canola oil",
-    category: "Oils",
-    packSize: 10,
-    unit: "L",
-    supplier: "Metro Wholesale",
-    unitCost: 2.15,
-    packPrice: 21.5,
-  },
-  {
-    id: "10",
-    name: "Fresh basil",
-    category: "Produce",
-    packSize: 0.1,
-    unit: "kg",
-    supplier: "Hilltop Farm",
-    unitCost: 28,
-    packPrice: 2.8,
-  },
-  {
-    id: "11",
-    name: "Yellow onion",
-    category: "Produce",
-    packSize: 5,
-    unit: "kg",
-    supplier: "Hilltop Farm",
-    unitCost: 1.2,
-    packPrice: 6,
-  },
-  {
-    id: "12",
-    name: "Instant dry yeast",
-    category: "Dry goods",
-    packSize: 0.5,
-    unit: "kg",
-    supplier: "Metro Wholesale",
-    unitCost: 9.6,
-    packPrice: 4.8,
-  },
-  {
-    id: "13",
-    name: "Sea salt",
-    category: "Dry goods",
-    packSize: 1,
-    unit: "kg",
-    supplier: "Metro Wholesale",
-    unitCost: 1.1,
-    packPrice: 1.1,
-  },
 ];
 
 const formatMoney = (value: number) => `$${value.toFixed(2)}`;
@@ -179,13 +91,16 @@ export default function IngredientsScreen() {
   const businessId = useAccountUserStore((state) => state.businessId);
 
   const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
   const [category, setCategory] = useState("All");
 
   const initCategories = useCallback(async (bId: string) => {
     try {
       const categories = await getCategories(bId, CategoryType.INGREDIENT);
-      const ingredientCategories = categories.map((category) => category.name);
+      const ingredientCategories = categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+      }));
       setCategories(ingredientCategories);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -218,21 +133,65 @@ export default function IngredientsScreen() {
     });
   }, [category, query]);
 
-  const handleCreateCategory = (name: string) => {
-    setCategories((prev) => [...prev, name]);
-  };
-
-  const handleRenameCategory = (from: string, to: string) => {
-    setCategories((prev) => prev.map((item) => (item === from ? to : item)));
-    if (category === from) {
-      setCategory(to);
+  const handleCreateCategory = async (name: string) => {
+    try {
+      const category = await createCategory({
+        name,
+        type: CategoryType.INGREDIENT,
+        businessId: businessId!,
+      });
+      setCategories((prev) => [
+        ...prev,
+        { id: category.id, name: category.name },
+      ]);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
     }
   };
 
-  const handleDeleteCategory = (name: string) => {
-    setCategories((prev) => prev.filter((item) => item !== name));
-    if (category === name) {
-      setCategory("All");
+  const handleRenameCategory = async (from: string, to: string, id: string) => {
+    try {
+      await updateCategory(id, { name: to });
+      setCategories((prev) =>
+        prev.map((item) => (item.name === from ? { ...item, name: to } : item)),
+      );
+      if (category === from) {
+        setCategory(to);
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  };
+
+  const selectedCategory = useMemo(
+    () =>
+      category === ALL_CATEGORY.name
+        ? ALL_CATEGORY
+        : (categories.find((c) => c.name === category) ?? ALL_CATEGORY),
+    [categories, category],
+  );
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+    setCategories((prev) => prev.filter((item) => item.id !== id));
+    if (selectedCategory.id === id) {
+      setCategory(ALL_CATEGORY.name);
     }
   };
 
@@ -289,7 +248,7 @@ export default function IngredientsScreen() {
 
         <Categories
           categories={categories}
-          selected={category}
+          selected={selectedCategory}
           onSelect={setCategory}
           onCreate={handleCreateCategory}
           onRename={handleRenameCategory}

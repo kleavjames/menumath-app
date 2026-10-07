@@ -10,6 +10,10 @@ interface CreateCategoryPayload {
   businessId: string;
 }
 
+interface UpdateCategoryPayload {
+  name: string;
+}
+
 export const getCategories = async (businessId: string, type: CategoryType) => {
   const response = await client.get<Category[] | ApiErrorPayload>(
     `/categories?businessId=${businessId}&type=${type}`,
@@ -34,5 +38,33 @@ export const createCategory = async (payload: CreateCategoryPayload) => {
     throw new ApiError(payload);
   }
 
-  return response.data;
+  return response.data as Category;
+};
+
+export const updateCategory = async (
+  id: string,
+  payload: UpdateCategoryPayload,
+) => {
+  const response = await client.patch<Category | ApiErrorPayload>(
+    `/categories/${id}`,
+    payload,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return response.data as Category;
+};
+
+export const deleteCategory = async (id: string) => {
+  const response = await client.delete<Category | ApiErrorPayload>(
+    `/categories/${id}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
 };

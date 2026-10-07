@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
+import { IngredientCategory } from "@/app/(app)/ingredients";
 import { Pill, Text } from "@/components/atoms";
 
 const ALL_CATEGORY = "All";
@@ -16,11 +17,11 @@ const UniTextInput = withUnistyles(TextInput, (theme) => ({
 }));
 
 type CategoriesProps = {
-  categories: string[];
-  selected: string;
+  categories: IngredientCategory[];
+  selected: IngredientCategory;
   onSelect: (category: string) => void;
   onCreate: (name: string) => void;
-  onRename: (from: string, to: string) => void;
+  onRename: (from: string, to: string, id: string) => void;
   onDelete: (name: string) => void;
 };
 
@@ -37,6 +38,8 @@ export const Categories = ({
   const [name, setName] = useState("");
   const inputRef = useRef<TextInput>(null);
   const editingCategoryRef = useRef<string | null>(null);
+
+  const editingCategoryIdRef = useRef<string | null>(null);
   const nameRef = useRef("");
   const isCreatingRef = useRef(false);
 
@@ -59,8 +62,8 @@ export const Categories = ({
 
     return !categories.some(
       (category) =>
-        category.toLowerCase() === trimmed.toLowerCase() &&
-        category !== except,
+        category.name.toLowerCase() === trimmed.toLowerCase() &&
+        category.name !== except,
     );
   };
 
@@ -91,12 +94,8 @@ export const Categories = ({
     const trimmed = nameRef.current.trim();
     resetInput();
 
-    if (
-      trimmed &&
-      trimmed !== previous &&
-      isNameAvailable(trimmed, previous)
-    ) {
-      onRename(previous, trimmed);
+    if (trimmed && trimmed !== previous && isNameAvailable(trimmed, previous)) {
+      onRename(previous, trimmed, editingCategoryIdRef.current!);
     }
   };
 
@@ -120,9 +119,10 @@ export const Categories = ({
     setIsCreating(true);
   };
 
-  const startEditing = (category: string) => {
+  const startEditing = (category: string, id: string) => {
     dismissActiveInput();
     editingCategoryRef.current = category;
+    editingCategoryIdRef.current = id;
     nameRef.current = category;
     setIsCreating(false);
     setEditingCategory(category);
@@ -134,18 +134,18 @@ export const Categories = ({
     onSelect(category);
   };
 
-  const handleLongPress = (category: string) => {
-    Alert.alert(category, "Edit or delete this category", [
+  const handleLongPress = (category: IngredientCategory) => {
+    Alert.alert(category.name, "Edit or delete this category", [
       {
         text: "Edit",
-        onPress: () => startEditing(category),
+        onPress: () => startEditing(category.name, category.id),
       },
       {
         text: "Delete",
         style: "destructive",
         onPress: () => {
           resetInput();
-          onDelete(category);
+          onDelete(category.id);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -177,28 +177,28 @@ export const Categories = ({
       onScrollBeginDrag={dismissActiveInput}
     >
       <Pill
-        selected={selected === ALL_CATEGORY}
+        selected={selected?.name === ALL_CATEGORY}
         onPress={() => handleSelect(ALL_CATEGORY)}
       >
         {ALL_CATEGORY}
       </Pill>
 
       {categories.map((category) => {
-        if (editingCategory === category) {
+        if (editingCategory === category.name) {
           return (
-            <View key={category}>{renderCategoryInput(finishEditing)}</View>
+            <View key={category.id}>{renderCategoryInput(finishEditing)}</View>
           );
         }
 
         return (
           <Pill
-            key={category}
-            selected={selected === category}
-            onPress={() => handleSelect(category)}
+            key={category.id}
+            selected={selected?.name === category.name}
+            onPress={() => handleSelect(category.name)}
             onLongPress={() => handleLongPress(category)}
             delayLongPress={350}
           >
-            {category}
+            {category.name}
           </Pill>
         );
       })}
