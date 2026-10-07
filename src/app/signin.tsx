@@ -12,8 +12,10 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
+import { useAuth } from "../../provider/AuthProvider";
 
 const SignIn = () => {
+  const { login } = useAuth();
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
