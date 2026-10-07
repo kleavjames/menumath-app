@@ -1,11 +1,14 @@
-import { SymbolView } from "expo-symbols";
 import { router } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, StepperInput, Text } from "@/components/atoms";
+import { useAuth } from "../../../provider/AuthProvider";
+import { signOut } from "../../../service/api/auth";
+import { ApiError } from "../../../types/common";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
@@ -40,9 +43,7 @@ const SettingsRow = ({
       </View>
       <View style={styles.rowTrailing}>
         {trailing ??
-          (value ? (
-            <Text color="textSecondary">{value}</Text>
-          ) : null)}
+          (value ? <Text color="textSecondary">{value}</Text> : null)}
         {showChevron ? (
           <UniChevron
             name={{
@@ -73,8 +74,30 @@ const SettingsRow = ({
 };
 
 export default function SettingsScreen() {
+  const { logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [targetFoodCost, setTargetFoodCost] = useState(30);
+
+  const onSignOut = async () => {
+    try {
+      await signOut();
+      logout();
+      router.replace("/signin");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    Alert.alert("Sign out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign out", onPress: onSignOut },
+    ]);
+  };
 
   return (
     <View
@@ -127,7 +150,11 @@ export default function SettingsScreen() {
         </Card>
 
         <View style={styles.section}>
-          <Text variant="caption" color="textSecondary" style={styles.sectionLabel}>
+          <Text
+            variant="caption"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
             Business
           </Text>
           <Card style={styles.listCard}>
@@ -150,7 +177,11 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text variant="caption" color="textSecondary" style={styles.sectionLabel}>
+          <Text
+            variant="caption"
+            color="textSecondary"
+            style={styles.sectionLabel}
+          >
             Costing
           </Text>
           <Card style={styles.listCard}>
@@ -194,9 +225,7 @@ export default function SettingsScreen() {
               styles.signOutRow,
               pressed && styles.rowPressed,
             ]}
-            onPress={() => {
-              router.replace("/");
-            }}
+            onPress={handleSignOut}
           >
             <Text color="error">Sign out</Text>
           </Pressable>

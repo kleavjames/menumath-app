@@ -1,6 +1,14 @@
+import { Redirect } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useAuth } from "../../../provider/AuthProvider";
 
 export default function AppLayout() {
+  const { token } = useAuth();
+
+  if (!token) {
+    return <Redirect href="/signin" />;
+  }
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
