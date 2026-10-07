@@ -29,7 +29,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     <AuthContext.Provider
       value={{
         login: (token: string) => {
-          // Perform sign-in logic here
           setToken(token);
         },
         logout: () => {

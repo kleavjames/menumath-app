@@ -1,5 +1,5 @@
 import { SymbolView } from "expo-symbols";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -7,6 +7,10 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories } from "@/components/organisms";
+import { getCategories } from "../../../service/api/categories";
+import { useAccountUserStore } from "../../../store/accountUser";
+import { CategoryType } from "../../../types/business";
+import { ApiError } from "../../../types/common";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
@@ -171,9 +175,32 @@ const formatUnitCost = (ingredient: Ingredient) =>
 
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
+
+  const businessId = useAccountUserStore((state) => state.businessId);
+
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategory] = useState("All");
+
+  const initCategories = useCallback(async (bId: string) => {
+    try {
+      const categories = await getCategories(bId, CategoryType.INGREDIENT);
+      const ingredientCategories = categories.map((category) => category.name);
+      setCategories(ingredientCategories);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (businessId) {
+      initCategories(businessId);
+    }
+  }, [initCategories]);
 
   const filteredIngredients = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -196,9 +223,7 @@ export default function IngredientsScreen() {
   };
 
   const handleRenameCategory = (from: string, to: string) => {
-    setCategories((prev) =>
-      prev.map((item) => (item === from ? to : item)),
-    );
+    setCategories((prev) => prev.map((item) => (item === from ? to : item)));
     if (category === from) {
       setCategory(to);
     }

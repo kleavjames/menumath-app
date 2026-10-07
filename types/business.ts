@@ -42,3 +42,12 @@ export interface Business {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Category {
+  id: string;
+  name: string;
+  type: CategoryType;
+  businessId: string;
+  createdAt: string;
+  updatedAt: string;
+}
