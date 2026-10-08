@@ -16,14 +16,22 @@ const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
 }));
 
+export type InputSize = "sm" | "md" | "lg" | "xl" | "display";
+
 interface InputProps extends RNTextInputProps {
   state?: "error";
+  /** "ghost" is a borderless, large, bold input for title-like fields. */
+  variant?: "ghost";
+  /** Overrides the font size. Omitted keeps the current size for the variant. */
+  size?: InputSize;
   rightIcon?: ReactNode;
   onIconPress?: () => void;
 }
 
 export const Input = ({
   state,
+  variant,
+  size,
   style,
   secureTextEntry,
   rightIcon,
@@ -37,6 +45,8 @@ export const Input = ({
   styles.useVariants({
     state,
     hasIcon: showIcon,
+    variant,
+    size,
   });
 
   const handleIconPress = () => {
@@ -118,6 +128,24 @@ const styles = StyleSheet.create((theme) => ({
         false: {
           paddingRight: theme.gap(2),
         },
+      },
+      variant: {
+        default: {},
+        ghost: {
+          backgroundColor: "transparent",
+          borderWidth: 0,
+          paddingHorizontal: 0,
+          fontSize: theme.fontSize.display,
+          fontFamily: theme.fontFamily.bold,
+        },
+      },
+      size: {
+        default: {},
+        sm: { fontSize: theme.fontSize.sm },
+        md: { fontSize: theme.fontSize.md },
+        lg: { fontSize: theme.fontSize.lg },
+        xl: { fontSize: theme.fontSize.xl },
+        display: { fontSize: theme.fontSize.display },
       },
     },
   },
