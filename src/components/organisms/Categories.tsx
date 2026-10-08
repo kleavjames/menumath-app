@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { IngredientCategory } from "@/app/(app)/ingredients";
+import { IngredientCategory } from "@/app/(app)/(ingredients)";
 import { Pill, Text } from "@/components/atoms";
 
 const ALL_CATEGORY = "All";

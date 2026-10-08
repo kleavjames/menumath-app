@@ -12,10 +12,10 @@ import {
   deleteCategory,
   getCategories,
   updateCategory,
-} from "../../../service/api/categories";
-import { useAccountUserStore } from "../../../store/accountUser";
-import { Category, CategoryType } from "../../../types/business";
-import { ApiError } from "../../../types/common";
+} from "../../../../service/api/categories";
+import { useAccountUserStore } from "../../../../store/accountUser";
+import { Category, CategoryType } from "../../../../types/business";
+import { ApiError } from "../../../../types/common";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,

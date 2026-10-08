@@ -15,7 +15,7 @@ export default function AppLayout() {
         <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet" renderingMode="template" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="ingredients">
+      <NativeTabs.Trigger name="(ingredients)">
         <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet" renderingMode="template" />
       </NativeTabs.Trigger>
