@@ -1,4 +1,4 @@
-import { MetricUnit } from "../../types/business";
+import { CategoryType, MetricUnit } from "../../types/business";
 import { ApiError, ApiErrorPayload } from "../../types/common";
 import { Ingredient } from "../../types/ingredient";
 import client from "./client";
@@ -26,4 +26,20 @@ export const createIngredient = async (payload: CreateIngredientPayload) => {
   }
 
   return response.data as Ingredient;
+};
+
+export const getIngredients = async (
+  businessId: string,
+  type: CategoryType,
+) => {
+  const response = await client.get<Ingredient[] | ApiErrorPayload>(
+    `/ingredients?businessId=${businessId}&type=${type}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return response.data as Ingredient[];
 };

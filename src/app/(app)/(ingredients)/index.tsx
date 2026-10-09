@@ -1,6 +1,6 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -8,30 +8,32 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories } from "@/components/organisms";
+import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
 import {
   createCategory,
   deleteCategory,
   getCategories,
   updateCategory,
 } from "../../../../service/api/categories";
+import { getIngredients } from "../../../../service/api/ingredients";
+import {
+  formatAmount,
+  formatPrice,
+  toNumber,
+} from "../../../../service/helpers/money";
 import { useAccountUserStore } from "../../../../store/accountUser";
-import { Category, CategoryType } from "../../../../types/business";
+import {
+  Category,
+  CategoryType,
+  Currency,
+  MetricUnit,
+} from "../../../../types/business";
 import { ApiError } from "../../../../types/common";
+import { Ingredient } from "../../../../types/ingredient";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
-
-type Ingredient = {
-  id: string;
-  name: string;
-  category: string;
-  packSize: number;
-  unit: string;
-  supplier: string;
-  unitCost: number;
-  packPrice: number;
-};
 
 export type IngredientCategory = Omit<
   Category,
@@ -40,63 +42,36 @@ export type IngredientCategory = Omit<
 
 const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 
-const INGREDIENTS: Ingredient[] = [
-  {
-    id: "1",
-    name: "00 pizza flour",
-    category: "Dry goods",
-    packSize: 25,
-    unit: "kg",
-    supplier: "Caputo Direct",
-    unitCost: 1.54,
-    packPrice: 38.5,
-  },
-  {
-    id: "2",
-    name: "Unsalted butter",
-    category: "Dairy",
-    packSize: 1,
-    unit: "kg",
-    supplier: "Valley Creamery",
-    unitCost: 11.8,
-    packPrice: 11.8,
-  },
-  {
-    id: "3",
-    name: "Whole milk",
-    category: "Dairy",
-    packSize: 4,
-    unit: "L",
-    supplier: "Valley Creamery",
-    unitCost: 1.3,
-    packPrice: 5.2,
-  },
-];
+const unitLabel = (unit: MetricUnit | string) =>
+  UNIT_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
 
-const formatMoney = (value: number) =>
-  `$${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const formatPackSize = (ingredient: Ingredient) => {
-  const size =
-    ingredient.packSize % 1 === 0
-      ? ingredient.packSize.toString()
-      : ingredient.packSize.toFixed(1);
-  return `${size} ${ingredient.unit}`;
+const costUnitLabel = (unit: MetricUnit) => {
+  const option = UNIT_OPTIONS.find((item) => item.value === unit);
+  if (option?.subUnit) return unitLabel(option.subUnit.label);
+  return option?.label ?? unit;
 };
 
-const formatUnitCost = (ingredient: Ingredient) =>
-  `${formatMoney(ingredient.unitCost)}/${ingredient.unit}`;
+const formatPackSize = (ingredient: Ingredient) =>
+  `${formatAmount(toNumber(ingredient.itemSize))} ${unitLabel(ingredient.itemSizeUnit)}`;
+
+const formatUnitCost = (ingredient: Ingredient, symbol: string) =>
+  `${symbol}${formatAmount(toNumber(ingredient.usableCostPerItem))}/${costUnitLabel(ingredient.itemSizeUnit)}`;
+
+const formatPackPrice = (ingredient: Ingredient, symbol: string) =>
+  `${symbol}${formatPrice(toNumber(ingredient.itemPrice))} / pack`;
 
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
 
   const businessId = useAccountUserStore((state) => state.businessId);
+  const currency = useAccountUserStore(
+    (state) => state.business?.currency ?? Currency.USD,
+  );
+  const symbol = CURRENCY_SYMBOLS[currency];
 
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [category, setCategory] = useState("All");
 
   const initCategories = useCallback(async (bId: string) => {
@@ -116,27 +91,57 @@ export default function IngredientsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (businessId) {
-      initCategories(businessId);
+  const initIngredients = useCallback(async (bId: string) => {
+    try {
+      const result = await getIngredients(bId, CategoryType.INGREDIENT);
+      setIngredients(result);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
     }
-  }, [initCategories]);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!businessId) return;
+      initCategories(businessId);
+      initIngredients(businessId);
+    }, [businessId, initCategories, initIngredients]),
+  );
+
+  const selectedCategory = useMemo(
+    () =>
+      category === ALL_CATEGORY.name
+        ? ALL_CATEGORY
+        : (categories.find((c) => c.name === category) ?? ALL_CATEGORY),
+    [categories, category],
+  );
+
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((item) => [item.id, item.name])),
+    [categories],
+  );
 
   const filteredIngredients = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return INGREDIENTS.filter((ingredient) => {
+    return ingredients.filter((ingredient) => {
+      const categoryName = categoryNameById.get(ingredient.categoryId) ?? "";
       const matchesCategory =
-        category === "All" || ingredient.category === category;
+        selectedCategory.id === ALL_CATEGORY.id ||
+        ingredient.categoryId === selectedCategory.id;
       const matchesQuery =
         !normalizedQuery ||
         ingredient.name.toLowerCase().includes(normalizedQuery) ||
         ingredient.supplier.toLowerCase().includes(normalizedQuery) ||
-        ingredient.category.toLowerCase().includes(normalizedQuery);
+        categoryName.toLowerCase().includes(normalizedQuery);
 
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [categoryNameById, ingredients, query, selectedCategory]);
 
   const handleCreateCategory = async (name: string) => {
     try {
@@ -177,14 +182,6 @@ export default function IngredientsScreen() {
       }
     }
   };
-
-  const selectedCategory = useMemo(
-    () =>
-      category === ALL_CATEGORY.name
-        ? ALL_CATEGORY
-        : (categories.find((c) => c.name === category) ?? ALL_CATEGORY),
-    [categories, category],
-  );
 
   const handleDeleteCategory = async (id: string) => {
     try {
@@ -242,7 +239,7 @@ export default function IngredientsScreen() {
             </Pressable>
           </View>
           <Text color="textSecondary">
-            {INGREDIENTS.length} items · prices in USD
+            {ingredients.length} items · prices in {currency}
           </Text>
         </View>
 
@@ -282,7 +279,9 @@ export default function IngredientsScreen() {
           <Card style={styles.listCard}>
             {filteredIngredients.length === 0 ? (
               <Text color="textSecondary" style={styles.empty}>
-                No ingredients match your search.
+                {ingredients.length === 0
+                  ? "No ingredients yet."
+                  : "No ingredients match your search."}
               </Text>
             ) : (
               filteredIngredients.map((ingredient, index) => (
@@ -301,15 +300,16 @@ export default function IngredientsScreen() {
                     <View style={styles.rowLeft}>
                       <Text style={styles.itemName}>{ingredient.name}</Text>
                       <Text variant="caption" color="textSecondary">
-                        {formatPackSize(ingredient)} · {ingredient.supplier}
+                        {formatPackSize(ingredient)}
+                        {ingredient.supplier ? ` · ${ingredient.supplier}` : ""}
                       </Text>
                     </View>
                     <View style={styles.rowRight}>
                       <Text style={styles.unitCost}>
-                        {formatUnitCost(ingredient)}
+                        {formatPackPrice(ingredient, symbol)}
                       </Text>
                       <Text variant="caption" color="textSecondary">
-                        {formatMoney(ingredient.packPrice)} / pack
+                        {formatUnitCost(ingredient, symbol)}
                       </Text>
                     </View>
                   </Pressable>
