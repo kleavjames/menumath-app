@@ -4,13 +4,27 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../../provider/AuthProvider";
 
-SplashScreen.preventAutoHideAsync();
+const SPLASH_MIN_DISPLAY_MS = 2000;
+
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Splash may already be hidden (e.g. fast refresh); safe to ignore.
+});
 
 export default function RootLayout() {
+  const [minDisplayElapsed, setMinDisplayElapsed] = useState(false);
+
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setMinDisplayElapsed(true),
+      SPLASH_MIN_DISPLAY_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, []);
+
   const [loaded, error] = useFonts({
     "OpenSans-Italic": require("../../assets/fonts/OpenSans-Italic.ttf"),
     "OpenSans-Light": require("../../assets/fonts/OpenSans-Light.ttf"),
@@ -26,19 +40,22 @@ export default function RootLayout() {
     "OpenSans-ExtraBoldItalic": require("../../assets/fonts/OpenSans-ExtraBoldItalic.ttf"),
   });
 
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
+  const resourcesReady = loaded || !!error;
+  const appReady = resourcesReady && minDisplayElapsed;
 
-  if (!loaded && !error) {
+  const onLayoutRootView = useCallback(() => {
+    if (appReady) {
+      void SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
+  if (!appReady) {
     return null;
   }
 
   return (
     <AuthProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
         <BottomSheetModalProvider>
           <Stack>
             <Stack.Screen name="signin" options={{ headerShown: false }} />
