@@ -74,7 +74,11 @@ const RECIPES: Recipe[] = [
   },
 ];
 
-const formatMoney = (value: number) => `$${value.toFixed(2)}`;
+const formatMoney = (value: number) =>
+  `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const getCostStatus = (percent: number): CostStatus => {
   if (percent <= TARGET_FOOD_COST) return "good";

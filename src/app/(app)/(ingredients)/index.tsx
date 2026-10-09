@@ -73,7 +73,11 @@ const INGREDIENTS: Ingredient[] = [
   },
 ];
 
-const formatMoney = (value: number) => `$${value.toFixed(2)}`;
+const formatMoney = (value: number) =>
+  `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const formatPackSize = (ingredient: Ingredient) => {
   const size =
