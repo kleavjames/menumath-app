@@ -8,6 +8,7 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, StepperInput, Text } from "@/components/atoms";
 import { useAuth } from "../../../provider/AuthProvider";
 import { signOut } from "../../../service/api/auth";
+import { useAccountUserStore } from "../../../store/accountUser";
 import { ApiError } from "../../../types/common";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
@@ -76,11 +77,17 @@ const SettingsRow = ({
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const clearAccountUser = useAccountUserStore(
+    (state) => state.clearAccountUser,
+  );
+
   const [targetFoodCost, setTargetFoodCost] = useState(30);
 
   const onSignOut = async () => {
     try {
       await signOut();
+      clearAccountUser();
       logout();
       router.replace("/signin");
     } catch (error) {

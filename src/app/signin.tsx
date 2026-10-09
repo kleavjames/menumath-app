@@ -10,10 +10,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Button, Loader, Text } from "@/components/atoms";
+import { Button, Loader, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
 import { useAuth } from "../../provider/AuthProvider";
 import { signIn } from "../../service/api/auth";
+import { useAccountUserStore } from "../../store/accountUser";
 import { ApiError } from "../../types/common";
 
 type FieldErrors = {
@@ -24,6 +25,8 @@ type FieldErrors = {
 const SignIn = () => {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const setAccountUser = useAccountUserStore((state) => state.setAccountUser);
 
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
@@ -68,6 +71,8 @@ const SignIn = () => {
     try {
       const response = await signIn(username, password);
       login(response.accessToken);
+      setAccountUser(response.user);
+      showToast("Signed in successfully", { variant: "default" });
       router.replace("/(app)");
     } catch (err) {
       if (err instanceof ApiError) {

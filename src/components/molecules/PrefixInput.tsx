@@ -1,18 +1,18 @@
 import { View, type TextInputProps as RNTextInputProps } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Input, Text, type InputSize } from "@/components/atoms";
+import { InputWithPrefix, Text } from "@/components/atoms";
 
-interface TextInputProps extends RNTextInputProps {
+interface PrefixInputProps extends Omit<RNTextInputProps, "style"> {
   label?: string;
+  /** Symbol shown before the value, e.g. "$". */
+  prefix?: string;
+  /** Symbol shown after the value, e.g. "%". */
+  suffix?: string;
   error?: string | null;
-  variant?: "ghost";
-  size?: InputSize;
 }
 
-export const TextInput = ({ label, error, ...props }: TextInputProps) => {
-  const state = error ? "error" : undefined;
-
+export const PrefixInput = ({ label, error, ...props }: PrefixInputProps) => {
   return (
     <View style={styles.container}>
       {label ? (
@@ -20,7 +20,7 @@ export const TextInput = ({ label, error, ...props }: TextInputProps) => {
           {label}
         </Text>
       ) : null}
-      <Input state={state} {...props} />
+      <InputWithPrefix state={error ? "error" : undefined} {...props} />
       {error ? (
         <Text variant="caption" color="error">
           {error}

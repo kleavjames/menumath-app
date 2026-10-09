@@ -1,0 +1,476 @@
+import type { BottomSheetModal } from "@gorhom/bottom-sheet";
+import { router, useFocusEffect } from "expo-router";
+import { SymbolView } from "expo-symbols";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, withUnistyles } from "react-native-unistyles";
+
+import { Card, showToast, Text } from "@/components/atoms";
+import { SearchInput } from "@/components/molecules";
+import { Categories, IngredientView } from "@/components/organisms";
+import { CURRENCY_SYMBOLS } from "@/constants/units";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  updateCategory,
+} from "../../../../service/api/categories";
+import {
+  deleteIngredient,
+  getIngredients,
+} from "../../../../service/api/ingredients";
+import {
+  formatPackPrice,
+  formatPackSize,
+  formatUnitCost,
+} from "../../../../service/helpers/unit";
+import { useAccountUserStore } from "../../../../store/accountUser";
+import { Category, CategoryType, Currency } from "../../../../types/business";
+import { ApiError } from "../../../../types/common";
+import { Ingredient } from "../../../../types/ingredient";
+const UniSymbol = withUnistyles(SymbolView, (theme) => ({
+  tintColor: theme.colors.background,
+}));
+
+export type IngredientCategory = Omit<
+  Category,
+  "type" | "businessId" | "createdAt" | "updatedAt"
+>;
+
+const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
+
+export default function IngredientsScreen() {
+  const insets = useSafeAreaInsets();
+
+  const businessId = useAccountUserStore((state) => state.businessId);
+  const currency = useAccountUserStore(
+    (state) => state.business?.currency ?? Currency.USD,
+  );
+  const symbol = CURRENCY_SYMBOLS[currency];
+
+  const [query, setQuery] = useState("");
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [category, setCategory] = useState("All");
+  const [selectedIngredient, setSelectedIngredient] =
+    useState<Ingredient | null>(null);
+  const ingredientSheetRef = useRef<BottomSheetModal>(null);
+
+  const initCategories = useCallback(async (bId: string) => {
+    try {
+      const categories = await getCategories(bId, CategoryType.INGREDIENT);
+      const ingredientCategories = categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+      }));
+      setCategories(ingredientCategories);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  }, []);
+
+  const initIngredients = useCallback(async (bId: string) => {
+    try {
+      const result = await getIngredients(bId, CategoryType.INGREDIENT);
+      setIngredients(result);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!businessId) return;
+      initCategories(businessId);
+      initIngredients(businessId);
+    }, [businessId, initCategories, initIngredients]),
+  );
+
+  const selectedCategory = useMemo(
+    () =>
+      category === ALL_CATEGORY.name
+        ? ALL_CATEGORY
+        : (categories.find((c) => c.name === category) ?? ALL_CATEGORY),
+    [categories, category],
+  );
+
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((item) => [item.id, item.name])),
+    [categories],
+  );
+
+  const filteredIngredients = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return ingredients.filter((ingredient) => {
+      const categoryName = categoryNameById.get(ingredient.categoryId) ?? "";
+      const matchesCategory =
+        selectedCategory.id === ALL_CATEGORY.id ||
+        ingredient.categoryId === selectedCategory.id;
+      const matchesQuery =
+        !normalizedQuery ||
+        ingredient.name.toLowerCase().includes(normalizedQuery) ||
+        ingredient.supplier.toLowerCase().includes(normalizedQuery) ||
+        categoryName.toLowerCase().includes(normalizedQuery);
+
+      return matchesCategory && matchesQuery;
+    });
+  }, [categoryNameById, ingredients, query, selectedCategory]);
+
+  const handleOpenIngredient = (ingredient: Ingredient) => {
+    setSelectedIngredient(ingredient);
+    ingredientSheetRef.current?.present();
+  };
+
+  const handleEditIngredient = (ingredient: Ingredient) => {
+    ingredientSheetRef.current?.dismiss();
+    router.push({
+      pathname: "/create-ingredient",
+      params: {
+        id: ingredient.id,
+        name: ingredient.name,
+        categoryId: ingredient.categoryId,
+        supplier: ingredient.supplier ?? "",
+        itemSize: ingredient.itemSize,
+        itemSizeUnit: ingredient.itemSizeUnit,
+        itemPrice: ingredient.itemPrice,
+      },
+    });
+  };
+
+  const handleDeleteIngredient = (ingredient: Ingredient) => {
+    Alert.alert(
+      "Delete ingredient",
+      `Are you sure you want to delete "${ingredient.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteIngredient(ingredient.id);
+              setIngredients((prev) =>
+                prev.filter((item) => item.id !== ingredient.id),
+              );
+              ingredientSheetRef.current?.dismiss();
+              showToast("Ingredient deleted successfully", {
+                variant: "default",
+              });
+            } catch (error) {
+              if (error instanceof ApiError) {
+                showToast(error.message, { variant: "error" });
+              } else {
+                showToast("An unknown error occurred", { variant: "error" });
+              }
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleCreateCategory = async (name: string) => {
+    try {
+      const category = await createCategory({
+        name,
+        type: CategoryType.INGREDIENT,
+        businessId: businessId!,
+      });
+      setCategories((prev) => [
+        ...prev,
+        { id: category.id, name: category.name },
+      ]);
+      showToast("Category created successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+  };
+
+  const handleRenameCategory = async (from: string, to: string, id: string) => {
+    try {
+      await updateCategory(id, { name: to });
+      setCategories((prev) =>
+        prev.map((item) => (item.name === from ? { ...item, name: to } : item)),
+      );
+      if (category === from) {
+        setCategory(to);
+      }
+      showToast("Category renamed successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      showToast("Category deleted successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+    setCategories((prev) => prev.filter((item) => item.id !== id));
+    if (selectedCategory.id === id) {
+      setCategory(ALL_CATEGORY.name);
+    }
+  };
+
+  return (
+    <View
+      style={[
+        styles.screen,
+        {
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={Keyboard.dismiss}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Text variant="hero" style={styles.headline}>
+              Ingredients
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="New ingredient"
+              style={({ pressed }) => [
+                styles.newButton,
+                pressed && styles.newButtonPressed,
+              ]}
+              onPress={() => router.push("/create-ingredient")}
+            >
+              <UniSymbol
+                name={{ ios: "plus", android: "add", web: "add" }}
+                size={14}
+              />
+              <Text style={styles.newButtonLabel}>New</Text>
+            </Pressable>
+          </View>
+          <Text color="textSecondary">
+            {ingredients.length} items · prices in {currency}
+          </Text>
+        </View>
+
+        <View style={styles.search}>
+          <SearchInput
+            style={styles.search}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search ingredients or suppliers"
+          />
+        </View>
+
+        <Categories
+          categories={categories}
+          selected={selectedCategory}
+          onSelect={setCategory}
+          onCreate={handleCreateCategory}
+          onRename={handleRenameCategory}
+          onDelete={handleDeleteCategory}
+        />
+
+        <View style={styles.listSection}>
+          <View style={styles.columnHeaders}>
+            <Text
+              variant="caption"
+              color="textSecondary"
+              style={styles.columnLabel}
+            >
+              Ingredient
+            </Text>
+            <Text
+              variant="caption"
+              color="textSecondary"
+              style={styles.columnLabel}
+            >
+              Unit cost
+            </Text>
+          </View>
+
+          <Card style={styles.listCard}>
+            {filteredIngredients.length === 0 ? (
+              <Text color="textSecondary" style={styles.empty}>
+                {ingredients.length === 0
+                  ? "No ingredients yet."
+                  : "No ingredients match your search."}
+              </Text>
+            ) : (
+              filteredIngredients.map((ingredient, index) => (
+                <View key={ingredient.id}>
+                  {index > 0 ? <View style={styles.divider} /> : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && styles.rowPressed,
+                    ]}
+                    onPress={() => handleOpenIngredient(ingredient)}
+                  >
+                    <View style={styles.rowLeft}>
+                      <Text style={styles.itemName}>{ingredient.name}</Text>
+                      <Text variant="caption" color="textSecondary">
+                        {formatPackSize(ingredient)}
+                        {ingredient.supplier ? ` · ${ingredient.supplier}` : ""}
+                      </Text>
+                    </View>
+                    <View style={styles.rowRight}>
+                      <Text style={styles.unitCost}>
+                        {formatPackPrice(ingredient, symbol)}
+                      </Text>
+                      <Text variant="caption" color="textSecondary">
+                        {formatUnitCost(ingredient, symbol)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+              ))
+            )}
+          </Card>
+        </View>
+      </ScrollView>
+
+      <IngredientView
+        ref={ingredientSheetRef}
+        ingredient={selectedIngredient}
+        categoryName={
+          selectedIngredient
+            ? categoryNameById.get(selectedIngredient.categoryId)
+            : undefined
+        }
+        symbol={symbol}
+        onEdit={handleEditIngredient}
+        onDelete={handleDeleteIngredient}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create((theme) => ({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    // paddingHorizontal: theme.gap(3),
+  },
+  content: {
+    gap: theme.gap(2.5),
+    paddingBottom: theme.gap(4),
+  },
+  header: {
+    gap: theme.gap(1),
+    paddingHorizontal: theme.gap(3),
+  },
+  search: {
+    paddingHorizontal: theme.gap(3),
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.gap(2),
+  },
+  headline: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
+  newButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(0.75),
+    backgroundColor: theme.colors.text,
+    borderRadius: 9999,
+    paddingVertical: theme.gap(1),
+    paddingHorizontal: theme.gap(1.75),
+  },
+  newButtonPressed: {
+    opacity: 0.85,
+  },
+  newButtonLabel: {
+    color: theme.colors.background,
+    fontSize: theme.fontSize.sm,
+    fontFamily: theme.fontFamily.semiBold,
+  },
+  listSection: {
+    gap: theme.gap(1.5),
+    paddingHorizontal: theme.gap(3),
+  },
+  columnHeaders: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: theme.gap(0.5),
+  },
+  columnLabel: {
+    fontFamily: theme.fontFamily.medium,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  listCard: {
+    padding: 0,
+    gap: 0,
+    overflow: "hidden",
+  },
+  empty: {
+    padding: theme.gap(2.5),
+    textAlign: "center",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.gap(2),
+    paddingVertical: theme.gap(2),
+    paddingHorizontal: theme.gap(2.5),
+  },
+  rowPressed: {
+    opacity: 0.7,
+  },
+  rowLeft: {
+    flex: 1,
+    gap: theme.gap(0.5),
+  },
+  itemName: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.semiBold,
+    color: theme.colors.text,
+  },
+  rowRight: {
+    alignItems: "flex-end",
+    gap: theme.gap(0.5),
+  },
+  unitCost: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.medium,
+    color: theme.colors.text,
+  },
+}));

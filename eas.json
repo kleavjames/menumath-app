@@ -6,7 +6,12 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "APP_VERSION_IOS": "1.0.0",
+        "APP_VERSION_ANDROID": "1.0.0",
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000"
+      }
     },
     "development-simulator": {
       "extends": "development",
@@ -17,14 +22,16 @@
     "preview": {
       "env": {
         "APP_VERSION_IOS": "1.0.0",
-        "APP_VERSION_ANDROID": "1.0.0"
+        "APP_VERSION_ANDROID": "1.0.0",
+        "EXPO_PUBLIC_API_URL": "https://menumath-be.onrender.com"
       },
       "distribution": "internal"
     },
     "production": {
       "env": {
         "APP_VERSION_IOS": "1.0.0",
-        "APP_VERSION_ANDROID": "1.0.0"
+        "APP_VERSION_ANDROID": "1.0.0",
+        "EXPO_PUBLIC_API_URL": "https://menumath-be.onrender.com"
       },
       "autoIncrement": true
     }

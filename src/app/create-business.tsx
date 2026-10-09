@@ -13,6 +13,7 @@ import {
   Button,
   Loader,
   Pill,
+  showToast,
   Stepper,
   StepperInput,
   Text,
@@ -111,6 +112,7 @@ const CreateBusiness = () => {
       });
 
       login(response.accessToken);
+      showToast("Business created successfully", { variant: "default" });
       router.push("/(app)");
     } catch (error) {
       if (error instanceof ApiError) {
