@@ -21,12 +21,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: "menumath",
     version: appVersion,
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/images/menumath-icon.png",
     scheme: "menumathapp",
     userInterfaceStyle: "automatic",
     ios: {
       bundleIdentifier: "com.kleavantjames.menumath",
-      icon: "./assets/expo.icon",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
