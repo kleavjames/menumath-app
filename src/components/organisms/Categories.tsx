@@ -231,7 +231,7 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: theme.gap(1),
-    paddingRight: theme.gap(1),
+    paddingHorizontal: theme.gap(3),
   },
   addButton: {
     flexDirection: "row",

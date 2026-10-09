@@ -279,11 +279,14 @@ export default function IngredientsScreen() {
           </Text>
         </View>
 
-        <SearchInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search ingredients or suppliers"
-        />
+        <View style={styles.search}>
+          <SearchInput
+            style={styles.search}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search ingredients or suppliers"
+          />
+        </View>
 
         <Categories
           categories={categories}
@@ -374,7 +377,7 @@ const styles = StyleSheet.create((theme) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.gap(3),
+    // paddingHorizontal: theme.gap(3),
   },
   content: {
     gap: theme.gap(2.5),
@@ -382,6 +385,10 @@ const styles = StyleSheet.create((theme) => ({
   },
   header: {
     gap: theme.gap(1),
+    paddingHorizontal: theme.gap(3),
+  },
+  search: {
+    paddingHorizontal: theme.gap(3),
   },
   headerTop: {
     flexDirection: "row",
@@ -412,6 +419,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   listSection: {
     gap: theme.gap(1.5),
+    paddingHorizontal: theme.gap(3),
   },
   columnHeaders: {
     flexDirection: "row",
