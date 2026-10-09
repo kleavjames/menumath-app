@@ -5,7 +5,7 @@ import { Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Text } from "@/components/atoms";
+import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories } from "@/components/organisms";
 import {
@@ -149,11 +149,12 @@ export default function IngredientsScreen() {
         ...prev,
         { id: category.id, name: category.name },
       ]);
+      showToast("Category created successfully", { variant: "default" });
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(error.message);
+        showToast(error.message, { variant: "error" });
       } else {
-        console.error(error);
+        showToast("An unknown error occurred", { variant: "error" });
       }
     }
   };
@@ -167,11 +168,12 @@ export default function IngredientsScreen() {
       if (category === from) {
         setCategory(to);
       }
+      showToast("Category renamed successfully", { variant: "default" });
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(error.message);
+        showToast(error.message, { variant: "error" });
       } else {
-        console.error(error);
+        showToast("An unknown error occurred", { variant: "error" });
       }
     }
   };
@@ -187,11 +189,12 @@ export default function IngredientsScreen() {
   const handleDeleteCategory = async (id: string) => {
     try {
       await deleteCategory(id);
+      showToast("Category deleted successfully", { variant: "default" });
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(error.message);
+        showToast(error.message, { variant: "error" });
       } else {
-        console.error(error);
+        showToast("An unknown error occurred", { variant: "error" });
       }
     }
     setCategories((prev) => prev.filter((item) => item.id !== id));

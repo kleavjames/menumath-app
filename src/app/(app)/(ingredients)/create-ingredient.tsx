@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Pill, Text } from "@/components/atoms";
+import { Loader, Pill, showToast, Text } from "@/components/atoms";
 import {
   PrefixInput,
   SelectWithInput,
@@ -120,7 +120,7 @@ export default function CreateIngredientScreen() {
     setIsLoading(true);
 
     try {
-      const ingredient = await createIngredient({
+      await createIngredient({
         businessId: businessId!,
         name,
         categoryId: categoryId!,
@@ -130,12 +130,13 @@ export default function CreateIngredientScreen() {
         itemPrice: toNumber(packPrice),
         usableCostPerItem: usableCost.perSubUnit ?? usableCost.perUnit,
       });
+      showToast("Ingredient created successfully", { variant: "default" });
       router.back();
     } catch (error) {
       if (error instanceof ApiError) {
-        // TODO: handle API error
+        showToast(error.message, { variant: "error" });
       } else {
-        // TODO: handle unknown error
+        showToast("An unknown error occurred", { variant: "error" });
       }
     } finally {
       setIsLoading(false);
@@ -160,6 +161,7 @@ export default function CreateIngredientScreen() {
           ),
         }}
       />
+      <Loader visible={isLoading} text="Creating ingredient..." />
       <View
         style={[
           styles.screen,

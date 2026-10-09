@@ -10,4 +10,5 @@ export * from "./Select";
 export * from "./Stepper";
 export * from "./StepperInput";
 export * from "./Text";
+export * from "./Toast";
 export * from "./ToggleButton";
