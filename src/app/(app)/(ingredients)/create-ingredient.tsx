@@ -1,4 +1,4 @@
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -20,7 +20,10 @@ import { BigInfoCard } from "@/components/templates/BigInfoCard";
 
 import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
 import { getCategories } from "../../../../service/api/categories";
-import { createIngredient } from "../../../../service/api/ingredients";
+import {
+  createIngredient,
+  updateIngredient,
+} from "../../../../service/api/ingredients";
 import {
   formatAmount,
   formatPrice,
@@ -36,8 +39,25 @@ type FieldErrors = {
   packPrice?: string;
 };
 
+type EditParams = {
+  id?: string;
+  name?: string;
+  categoryId?: string;
+  supplier?: string;
+  itemSize?: string;
+  itemSizeUnit?: string;
+  itemPrice?: string;
+};
+
+/** Normalizes API decimals (e.g. "25.0000") into a plain editable number string. */
+const toInputValue = (value: string | undefined, fallback: string) =>
+  value === undefined ? fallback : String(toNumber(value));
+
 export default function CreateIngredientScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<EditParams>();
+  const ingredientId = params.id;
+  const isEditing = Boolean(ingredientId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
@@ -47,15 +67,21 @@ export default function CreateIngredientScreen() {
   const symbol = CURRENCY_SYMBOLS[currency];
 
   const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [name, setName] = useState(params.name ?? "");
+  const [categoryId, setCategoryId] = useState<string | undefined>(
+    params.categoryId,
+  );
   const [categoryOptions, setCategoryOptions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [supplier, setSupplier] = useState("");
-  const [packSize, setPackSize] = useState("1");
-  const [unit, setUnit] = useState(MetricUnit.KG);
-  const [packPrice, setPackPrice] = useState("");
+  const [supplier, setSupplier] = useState(params.supplier ?? "");
+  const [packSize, setPackSize] = useState(toInputValue(params.itemSize, "1"));
+  const [unit, setUnit] = useState(
+    (params.itemSizeUnit as MetricUnit | undefined) ?? MetricUnit.KG,
+  );
+  const [packPrice, setPackPrice] = useState(
+    toInputValue(params.itemPrice, ""),
+  );
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -120,8 +146,7 @@ export default function CreateIngredientScreen() {
     setIsLoading(true);
 
     try {
-      await createIngredient({
-        businessId: businessId!,
+      const values = {
         name,
         categoryId: categoryId!,
         supplier,
@@ -129,8 +154,20 @@ export default function CreateIngredientScreen() {
         itemSizeUnit: unit,
         itemPrice: toNumber(packPrice),
         usableCostPerItem: usableCost.perSubUnit ?? usableCost.perUnit,
-      });
-      showToast("Ingredient created successfully", { variant: "default" });
+      };
+
+      if (ingredientId) {
+        await updateIngredient(ingredientId, values);
+      } else {
+        await createIngredient({ businessId: businessId!, ...values });
+      }
+
+      showToast(
+        isEditing
+          ? "Ingredient updated successfully"
+          : "Ingredient created successfully",
+        { variant: "default" },
+      );
       router.back();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -148,7 +185,7 @@ export default function CreateIngredientScreen() {
       <Stack.Screen
         options={{
           headerTransparent: true,
-          title: "New Ingredient",
+          title: isEditing ? "Edit Ingredient" : "New Ingredient",
           headerLeft: () => (
             <Pressable onPressIn={router.back} style={styles.cancelButton}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -161,7 +198,10 @@ export default function CreateIngredientScreen() {
           ),
         }}
       />
-      <Loader visible={isLoading} text="Creating ingredient..." />
+      <Loader
+        visible={isLoading}
+        text={isEditing ? "Updating ingredient..." : "Creating ingredient..."}
+      />
       <View
         style={[
           styles.screen,

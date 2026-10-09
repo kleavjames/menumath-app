@@ -1,36 +1,34 @@
+import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useMemo, useState } from "react";
-import { Keyboard, Pressable, ScrollView, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
-import { Categories } from "@/components/organisms";
-import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
+import { Categories, IngredientView } from "@/components/organisms";
+import { CURRENCY_SYMBOLS } from "@/constants/units";
 import {
   createCategory,
   deleteCategory,
   getCategories,
   updateCategory,
 } from "../../../../service/api/categories";
-import { getIngredients } from "../../../../service/api/ingredients";
 import {
-  formatAmount,
-  formatPrice,
-  toNumber,
-} from "../../../../service/helpers/money";
+  deleteIngredient,
+  getIngredients,
+} from "../../../../service/api/ingredients";
+import {
+  formatPackPrice,
+  formatPackSize,
+  formatUnitCost,
+} from "../../../../service/helpers/unit";
 import { useAccountUserStore } from "../../../../store/accountUser";
-import {
-  Category,
-  CategoryType,
-  Currency,
-  MetricUnit,
-} from "../../../../types/business";
+import { Category, CategoryType, Currency } from "../../../../types/business";
 import { ApiError } from "../../../../types/common";
 import { Ingredient } from "../../../../types/ingredient";
-
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
@@ -41,24 +39,6 @@ export type IngredientCategory = Omit<
 >;
 
 const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
-
-const unitLabel = (unit: MetricUnit | string) =>
-  UNIT_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
-
-const costUnitLabel = (unit: MetricUnit) => {
-  const option = UNIT_OPTIONS.find((item) => item.value === unit);
-  if (option?.subUnit) return unitLabel(option.subUnit.label);
-  return option?.label ?? unit;
-};
-
-const formatPackSize = (ingredient: Ingredient) =>
-  `${formatAmount(toNumber(ingredient.itemSize))} ${unitLabel(ingredient.itemSizeUnit)}`;
-
-const formatUnitCost = (ingredient: Ingredient, symbol: string) =>
-  `${symbol}${formatAmount(toNumber(ingredient.usableCostPerItem))}/${costUnitLabel(ingredient.itemSizeUnit)}`;
-
-const formatPackPrice = (ingredient: Ingredient, symbol: string) =>
-  `${symbol}${formatPrice(toNumber(ingredient.itemPrice))} / pack`;
 
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
@@ -73,6 +53,9 @@ export default function IngredientsScreen() {
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [category, setCategory] = useState("All");
+  const [selectedIngredient, setSelectedIngredient] =
+    useState<Ingredient | null>(null);
+  const ingredientSheetRef = useRef<BottomSheetModal>(null);
 
   const initCategories = useCallback(async (bId: string) => {
     try {
@@ -142,6 +125,59 @@ export default function IngredientsScreen() {
       return matchesCategory && matchesQuery;
     });
   }, [categoryNameById, ingredients, query, selectedCategory]);
+
+  const handleOpenIngredient = (ingredient: Ingredient) => {
+    setSelectedIngredient(ingredient);
+    ingredientSheetRef.current?.present();
+  };
+
+  const handleEditIngredient = (ingredient: Ingredient) => {
+    ingredientSheetRef.current?.dismiss();
+    router.push({
+      pathname: "/create-ingredient",
+      params: {
+        id: ingredient.id,
+        name: ingredient.name,
+        categoryId: ingredient.categoryId,
+        supplier: ingredient.supplier ?? "",
+        itemSize: ingredient.itemSize,
+        itemSizeUnit: ingredient.itemSizeUnit,
+        itemPrice: ingredient.itemPrice,
+      },
+    });
+  };
+
+  const handleDeleteIngredient = (ingredient: Ingredient) => {
+    Alert.alert(
+      "Delete ingredient",
+      `Are you sure you want to delete "${ingredient.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteIngredient(ingredient.id);
+              setIngredients((prev) =>
+                prev.filter((item) => item.id !== ingredient.id),
+              );
+              ingredientSheetRef.current?.dismiss();
+              showToast("Ingredient deleted successfully", {
+                variant: "default",
+              });
+            } catch (error) {
+              if (error instanceof ApiError) {
+                showToast(error.message, { variant: "error" });
+              } else {
+                showToast("An unknown error occurred", { variant: "error" });
+              }
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleCreateCategory = async (name: string) => {
     try {
@@ -293,9 +329,7 @@ export default function IngredientsScreen() {
                       styles.row,
                       pressed && styles.rowPressed,
                     ]}
-                    onPress={() => {
-                      // TODO: open ingredient
-                    }}
+                    onPress={() => handleOpenIngredient(ingredient)}
                   >
                     <View style={styles.rowLeft}>
                       <Text style={styles.itemName}>{ingredient.name}</Text>
@@ -319,6 +353,19 @@ export default function IngredientsScreen() {
           </Card>
         </View>
       </ScrollView>
+
+      <IngredientView
+        ref={ingredientSheetRef}
+        ingredient={selectedIngredient}
+        categoryName={
+          selectedIngredient
+            ? categoryNameById.get(selectedIngredient.categoryId)
+            : undefined
+        }
+        symbol={symbol}
+        onEdit={handleEditIngredient}
+        onDelete={handleDeleteIngredient}
+      />
     </View>
   );
 }

@@ -28,6 +28,38 @@ export const createIngredient = async (payload: CreateIngredientPayload) => {
   return response.data as Ingredient;
 };
 
+export type UpdateIngredientPayload = Partial<
+  Omit<CreateIngredientPayload, "businessId">
+>;
+
+export const updateIngredient = async (
+  id: string,
+  payload: UpdateIngredientPayload,
+) => {
+  const response = await client.patch<Ingredient | ApiErrorPayload>(
+    `/ingredients/${id}`,
+    payload,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return response.data as Ingredient;
+};
+
+export const deleteIngredient = async (id: string) => {
+  const response = await client.delete<Ingredient | ApiErrorPayload>(
+    `/ingredients/${id}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+};
+
 export const getIngredients = async (
   businessId: string,
   type: CategoryType,
