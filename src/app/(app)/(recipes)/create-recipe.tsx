@@ -190,12 +190,7 @@ export default function CreateRecipeScreen() {
         }}
       />
 
-      <View
-        style={[
-          styles.screen,
-          { paddingTop: insets.top * 2, paddingBottom: insets.bottom },
-        ]}
-      >
+      <View style={[styles.screen, { paddingTop: insets.top * 2 }]}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -374,7 +369,7 @@ export default function CreateRecipeScreen() {
             </View>
           </ScrollView>
 
-          <View style={styles.summary}>
+          <View style={styles.summary(insets.bottom + 16)}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
                 <Text variant="caption" color="textSecondary">
@@ -535,8 +530,9 @@ const IngredientPicker = ({
                       <Text style={styles.lineName}>{ingredient.name}</Text>
                       <Text variant="caption" color="textSecondary">
                         {symbol}
-                        {formatAmount(toNumber(ingredient.usableCostPerItem))} /{" "}
-                        {costUnitLabel(ingredient.itemSizeUnit)}
+                        {formatAmount(
+                          toNumber(ingredient.usableCostPerItem),
+                        )} / {costUnitLabel(ingredient.itemSizeUnit)}
                       </Text>
                     </View>
                     <UniSymbol
@@ -684,15 +680,15 @@ const styles = StyleSheet.create((theme) => ({
   pressed: {
     opacity: 0.7,
   },
-  summary: {
+  summary: (bottom: number) => ({
     gap: theme.gap(1),
     backgroundColor: theme.colors.background,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingHorizontal: theme.gap(3),
     paddingTop: theme.gap(2),
-    paddingBottom: theme.gap(1),
-  },
+    paddingBottom: bottom,
+  }),
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
