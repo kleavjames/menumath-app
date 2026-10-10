@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { BusinessType, Currency } from "../types/business";
+import { BusinessType, Currency } from "@/types/business";
 
 interface AccountState {
   fullName: string;

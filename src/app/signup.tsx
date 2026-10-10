@@ -5,8 +5,8 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Text } from "@/components/atoms";
 import { BackButton, TextInput } from "@/components/molecules";
+import { useCreateAccountStore } from "@/store/createAccount";
 import { router } from "expo-router";
-import { useCreateAccountStore } from "../../store/createAccount";
 
 type FieldErrors = {
   fullName?: string;

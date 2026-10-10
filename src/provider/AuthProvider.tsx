@@ -1,5 +1,5 @@
+import { useAuthStore } from "@/store/auth";
 import React, { createContext, PropsWithChildren, useContext } from "react";
-import { useAuthStore } from "../store/auth";
 
 export const AuthContext = createContext<{
   login: (token: string) => void;

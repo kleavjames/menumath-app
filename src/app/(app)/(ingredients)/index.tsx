@@ -11,24 +11,21 @@ import { SearchInput } from "@/components/molecules";
 import { Categories, IngredientView } from "@/components/organisms";
 import { CURRENCY_SYMBOLS } from "@/constants/units";
 import {
+  formatPackPrice,
+  formatPackSize,
+  formatUnitCost,
+} from "@/helpers/unit";
+import {
   createCategory,
   deleteCategory,
   getCategories,
   updateCategory,
-} from "../../../../service/api/categories";
-import {
-  deleteIngredient,
-  getIngredients,
-} from "../../../../service/api/ingredients";
-import {
-  formatPackPrice,
-  formatPackSize,
-  formatUnitCost,
-} from "../../../../service/helpers/unit";
-import { useAccountUserStore } from "../../../../store/accountUser";
-import { Category, CategoryType, Currency } from "../../../../types/business";
-import { ApiError } from "../../../../types/common";
-import { Ingredient } from "../../../../types/ingredient";
+} from "@/service/api/categories";
+import { deleteIngredient, getIngredients } from "@/service/api/ingredients";
+import { useAccountUserStore } from "@/store/accountUser";
+import { Category, CategoryType, Currency } from "@/types/business";
+import { ApiError } from "@/types/common";
+import { Ingredient } from "@/types/ingredient";
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
@@ -242,12 +239,11 @@ export default function IngredientsScreen() {
         styles.screen,
         {
           paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom,
         },
       ]}
     >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.content(insets.bottom + 8)}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
@@ -377,12 +373,11 @@ const styles = StyleSheet.create((theme) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-    // paddingHorizontal: theme.gap(3),
   },
-  content: {
+  content: (paddingBottom: number) => ({
     gap: theme.gap(2.5),
-    paddingBottom: theme.gap(4),
-  },
+    paddingBottom,
+  }),
   header: {
     gap: theme.gap(1),
     paddingHorizontal: theme.gap(3),

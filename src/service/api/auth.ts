@@ -1,6 +1,6 @@
-import { Business, BusinessType, Currency } from "../../types/business";
-import { ApiError, ApiErrorPayload } from "../../types/common";
-import { Membership, User } from "../../types/user";
+import { Business, BusinessType, Currency } from "@/types/business";
+import { ApiError, ApiErrorPayload } from "@/types/common";
+import { Membership, User } from "@/types/user";
 import client from "./client";
 
 interface SignInResponse {

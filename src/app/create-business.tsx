@@ -19,12 +19,12 @@ import {
   Text,
 } from "@/components/atoms";
 import { BackButton, SelectInput, TextInput } from "@/components/molecules";
+import { useAuth } from "@/provider/AuthProvider";
+import { signUp } from "@/service/api/auth";
+import { useCreateAccountStore } from "@/store/createAccount";
+import { BusinessType, Currency } from "@/types/business";
+import { ApiError } from "@/types/common";
 import { router } from "expo-router";
-import { useAuth } from "../../provider/AuthProvider";
-import { signUp } from "../../service/api/auth";
-import { useCreateAccountStore } from "../../store/createAccount";
-import { BusinessType, Currency } from "../../types/business";
-import { ApiError } from "../../types/common";
 
 type FieldErrors = {
   businessName?: string;
