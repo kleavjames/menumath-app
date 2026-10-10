@@ -10,7 +10,8 @@
       "env": {
         "APP_VERSION_IOS": "1.0.0",
         "APP_VERSION_ANDROID": "1.0.0",
-        "EXPO_PUBLIC_API_URL": "http://localhost:3000"
+        // "EXPO_PUBLIC_API_URL": "http://localhost:3000"
+        "EXPO_PUBLIC_API_URL": "https://menumath-be.onrender.com"
       }
     },
     "development-simulator": {
