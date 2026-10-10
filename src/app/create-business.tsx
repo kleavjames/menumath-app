@@ -113,7 +113,7 @@ const CreateBusiness = () => {
 
       login(response.accessToken);
       showToast("Business created successfully", { variant: "default" });
-      router.push("/(app)");
+      router.push("/(app)/(recipes)");
     } catch (error) {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);

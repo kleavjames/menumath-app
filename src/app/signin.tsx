@@ -16,6 +16,7 @@ import { useAuth } from "@/provider/AuthProvider";
 import { signIn } from "@/service/api/auth";
 import { useAccountUserStore } from "@/store/accountUser";
 import { ApiError } from "@/types/common";
+import { Image } from "expo-image";
 
 type FieldErrors = {
   username?: string;
@@ -73,7 +74,7 @@ const SignIn = () => {
       login(response.accessToken);
       setAccountUser(response.user);
       showToast("Signed in successfully", { variant: "default" });
-      router.replace("/(app)");
+      router.replace("/(app)/(recipes)");
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);
@@ -108,7 +109,11 @@ const SignIn = () => {
           >
             <View style={styles.brand}>
               <View style={styles.logo}>
-                <Text style={styles.logoMark}>M÷</Text>
+                <Image
+                  source={require("@/assets/images/menumath-icon-1024.png")}
+                  style={styles.logoImage}
+                  accessibilityLabel="MenuMath logo"
+                />
               </View>
               <Text variant="title">MenuMath</Text>
             </View>
@@ -245,6 +250,14 @@ const styles = StyleSheet.create((theme) => ({
   link: {
     textDecorationLine: "underline",
     fontFamily: theme.fontFamily.semiBold,
+  },
+  logoImage: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.text,
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));
 

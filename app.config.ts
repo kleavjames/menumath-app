@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: "menumath",
     version: appVersion,
     orientation: "portrait",
-    icon: "./assets/images/menumath-icon.png",
+    icon: "./assets/images/menumath-icon-1024.png",
     scheme: "menumathapp",
     userInterfaceStyle: "automatic",
     ios: {
@@ -34,26 +34,22 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       package: "com.kleavantjames.menumath",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/menumath-icon.png",
-        backgroundImage: "./assets/images/menumath-icon.png",
-        monochromeImage: "./assets/images/menumath-icon.png",
+        foregroundImage: "./assets/images/menumath-foreground.png",
+        backgroundImage: "./assets/images/menumath-background.png",
+        monochromeImage: "./assets/images/menumath-monochrome.png",
       },
       predictiveBackGestureEnabled: false,
-    },
-    web: {
-      output: "static",
-      favicon: "./assets/images/favicon.png",
     },
     plugins: [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          backgroundColor: "#ffffff",
-          image: "./assets/images/menumath-splash-icon.png",
+          backgroundColor: "#000000",
+          image: "./assets/images/menumath-foreground.png",
           imageWidth: 200,
           android: {
-            image: "./assets/images/menumath-splash-icon.png",
+            image: "./assets/images/menumath-foreground.png",
             imageWidth: 200,
           },
         },

@@ -1,69 +1,81 @@
+import type { IngredientCategory } from "@/app/(app)/(ingredients)";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
-import { Categories, IngredientView } from "@/components/organisms";
+import { Categories, RecipeView } from "@/components/organisms";
 import { CURRENCY_SYMBOLS } from "@/constants/units";
-import {
-  formatPackPrice,
-  formatPackSize,
-  formatUnitCost,
-} from "@/helpers/unit";
-import { useKeyboard } from "@/hooks";
+import { formatPrice, toNumber } from "@/helpers/money";
 import {
   createCategory,
   deleteCategory,
   getCategories,
   updateCategory,
 } from "@/service/api/categories";
-import { deleteIngredient, getIngredients } from "@/service/api/ingredients";
+import { deleteRecipe, getRecipes } from "@/service/api/recipes";
 import { useAccountUserStore } from "@/store/accountUser";
 import { Category, CategoryType, Currency } from "@/types/business";
 import { ApiError } from "@/types/common";
-import { Ingredient } from "@/types/ingredient";
+import { Recipe } from "@/types/recipe";
+
+const DEFAULT_TARGET_FOOD_COST = 30;
+
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
 
-export type IngredientCategory = Omit<
-  Category,
-  "type" | "businessId" | "createdAt" | "updatedAt"
->;
-
 const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 
-export default function IngredientsScreen() {
+type CostStatus = "good" | "warn" | "over";
+
+const getCostStatus = (percent: number, target: number): CostStatus => {
+  if (percent <= target) return "good";
+  if (percent <= target + 5) return "warn";
+  return "over";
+};
+
+const buildRecipeMeta = (recipe: Recipe, symbol: string) => {
+  const parts: string[] = [];
+  if (recipe.servings > 1) {
+    parts.push(`Yields ${recipe.servings}`);
+  }
+  parts.push(`${symbol}${formatPrice(recipe.pricePerServing)} each`);
+  return parts.join(" · ");
+};
+
+export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
-  const { dismissKeyboard } = useKeyboard();
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
     (state) => state.business?.currency ?? Currency.USD,
   );
+  const targetFoodCost = useAccountUserStore((state) => {
+    const target = toNumber(state.business?.targetFoodCost ?? "");
+    return target > 0 ? target : DEFAULT_TARGET_FOOD_COST;
+  });
   const symbol = CURRENCY_SYMBOLS[currency];
 
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [category, setCategory] = useState("All");
-  const [selectedIngredient, setSelectedIngredient] =
-    useState<Ingredient | null>(null);
-  const ingredientSheetRef = useRef<BottomSheetModal>(null);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [category, setCategory] = useState(ALL_CATEGORY.name);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const recipeSheetRef = useRef<BottomSheetModal>(null);
+  const shouldPresentRecipeSheetRef = useRef(false);
 
   const initCategories = useCallback(async (bId: string) => {
     try {
-      const categories = await getCategories(bId, CategoryType.INGREDIENT);
-      const ingredientCategories = categories.map((category) => ({
-        id: category.id,
-        name: category.name,
-      }));
-      setCategories(ingredientCategories);
+      const result = await getCategories(bId, CategoryType.RECIPE);
+      setCategories(
+        result.map((item: Category) => ({ id: item.id, name: item.name })),
+      );
     } catch (error) {
       if (error instanceof ApiError) {
         console.error(error.message);
@@ -73,10 +85,10 @@ export default function IngredientsScreen() {
     }
   }, []);
 
-  const initIngredients = useCallback(async (bId: string) => {
+  const initRecipes = useCallback(async (bId: string) => {
     try {
-      const result = await getIngredients(bId, CategoryType.INGREDIENT);
-      setIngredients(result);
+      const result = await getRecipes(bId);
+      setRecipes(result);
     } catch (error) {
       if (error instanceof ApiError) {
         console.error(error.message);
@@ -89,16 +101,16 @@ export default function IngredientsScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!businessId) return;
-      initCategories(businessId);
-      initIngredients(businessId);
-    }, [businessId, initCategories, initIngredients]),
+      void initCategories(businessId);
+      void initRecipes(businessId);
+    }, [businessId, initCategories, initRecipes]),
   );
 
   const selectedCategory = useMemo(
     () =>
       category === ALL_CATEGORY.name
         ? ALL_CATEGORY
-        : (categories.find((c) => c.name === category) ?? ALL_CATEGORY),
+        : (categories.find((item) => item.name === category) ?? ALL_CATEGORY),
     [categories, category],
   );
 
@@ -107,50 +119,68 @@ export default function IngredientsScreen() {
     [categories],
   );
 
-  const filteredIngredients = useMemo(() => {
+  const filteredRecipes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return ingredients.filter((ingredient) => {
-      const categoryName = categoryNameById.get(ingredient.categoryId) ?? "";
+    return recipes.filter((recipe) => {
+      const categoryName = categoryNameById.get(recipe.categoryId) ?? "";
       const matchesCategory =
         selectedCategory.id === ALL_CATEGORY.id ||
-        ingredient.categoryId === selectedCategory.id;
+        recipe.categoryId === selectedCategory.id;
       const matchesQuery =
         !normalizedQuery ||
-        ingredient.name.toLowerCase().includes(normalizedQuery) ||
-        ingredient.supplier.toLowerCase().includes(normalizedQuery) ||
+        recipe.name.toLowerCase().includes(normalizedQuery) ||
         categoryName.toLowerCase().includes(normalizedQuery);
 
       return matchesCategory && matchesQuery;
     });
-  }, [categoryNameById, ingredients, query, selectedCategory]);
+  }, [categoryNameById, recipes, query, selectedCategory]);
 
-  const handleOpenIngredient = (ingredient: Ingredient) => {
-    dismissKeyboard();
-    setSelectedIngredient(ingredient);
-    ingredientSheetRef.current?.present();
+  const { avgFoodCost, overTargetCount } = useMemo(() => {
+    if (recipes.length === 0) {
+      return { avgFoodCost: 0, overTargetCount: 0 };
+    }
+
+    const totalFoodCost = recipes.reduce(
+      (sum, recipe) => sum + recipe.recipeCost,
+      0,
+    );
+    return {
+      avgFoodCost: totalFoodCost / recipes.length,
+      overTargetCount: recipes.filter(
+        (recipe) => recipe.recipeCost > targetFoodCost,
+      ).length,
+    };
+  }, [recipes, targetFoodCost]);
+
+  const handleOpenRecipe = (recipe: Recipe) => {
+    Keyboard.dismiss();
+    shouldPresentRecipeSheetRef.current = true;
+    setSelectedRecipe(recipe);
   };
 
-  const handleEditIngredient = (ingredient: Ingredient) => {
-    ingredientSheetRef.current?.dismiss();
+  useEffect(() => {
+    if (!selectedRecipe || !shouldPresentRecipeSheetRef.current) return;
+    shouldPresentRecipeSheetRef.current = false;
+    recipeSheetRef.current?.present();
+  }, [selectedRecipe]);
+
+  const handleDismissRecipeSheet = useCallback(() => {
+    setSelectedRecipe(null);
+  }, []);
+
+  const handleEditRecipe = (recipe: Recipe) => {
+    recipeSheetRef.current?.dismiss();
     router.push({
-      pathname: "/create-ingredient",
-      params: {
-        id: ingredient.id,
-        name: ingredient.name,
-        categoryId: ingredient.categoryId,
-        supplier: ingredient.supplier ?? "",
-        itemSize: ingredient.itemSize,
-        itemSizeUnit: ingredient.itemSizeUnit,
-        itemPrice: ingredient.itemPrice,
-      },
+      pathname: "/create-recipe",
+      params: { id: recipe.id },
     });
   };
 
-  const handleDeleteIngredient = (ingredient: Ingredient) => {
+  const handleDeleteRecipe = (recipe: Recipe) => {
     Alert.alert(
-      "Delete ingredient",
-      `Are you sure you want to delete "${ingredient.name}"?`,
+      "Delete recipe",
+      `Are you sure you want to delete "${recipe.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -158,14 +188,12 @@ export default function IngredientsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteIngredient(ingredient.id);
-              setIngredients((prev) =>
-                prev.filter((item) => item.id !== ingredient.id),
+              await deleteRecipe(recipe.id);
+              setRecipes((prev) =>
+                prev.filter((item) => item.id !== recipe.id),
               );
-              ingredientSheetRef.current?.dismiss();
-              showToast("Ingredient deleted successfully", {
-                variant: "default",
-              });
+              recipeSheetRef.current?.dismiss();
+              showToast("Recipe deleted successfully", { variant: "default" });
             } catch (error) {
               if (error instanceof ApiError) {
                 showToast(error.message, { variant: "error" });
@@ -181,14 +209,14 @@ export default function IngredientsScreen() {
 
   const handleCreateCategory = async (name: string) => {
     try {
-      const category = await createCategory({
+      const created = await createCategory({
         name,
-        type: CategoryType.INGREDIENT,
+        type: CategoryType.RECIPE,
         businessId: businessId!,
       });
       setCategories((prev) => [
         ...prev,
-        { id: category.id, name: category.name },
+        { id: created.id, name: created.name },
       ]);
       showToast("Category created successfully", { variant: "default" });
     } catch (error) {
@@ -255,16 +283,16 @@ export default function IngredientsScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text variant="hero" style={styles.headline}>
-              Ingredients
+              Recipes
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="New ingredient"
+              accessibilityLabel="New recipe"
               style={({ pressed }) => [
                 styles.newButton,
                 pressed && styles.newButtonPressed,
               ]}
-              onPress={() => router.push("/create-ingredient")}
+              onPress={() => router.push("/create-recipe")}
             >
               <UniSymbol
                 name={{ ios: "plus", android: "add", web: "add" }}
@@ -274,16 +302,16 @@ export default function IngredientsScreen() {
             </Pressable>
           </View>
           <Text color="textSecondary" variant="label">
-            {ingredients.length} items · prices in {currency}
+            {recipes.length} recipes · avg food cost {avgFoodCost.toFixed(1)}% ·{" "}
+            {overTargetCount} over target
           </Text>
         </View>
 
         <View style={styles.search}>
           <SearchInput
-            style={styles.search}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search ingredients or suppliers"
+            placeholder="Search recipes"
           />
         </View>
 
@@ -303,70 +331,87 @@ export default function IngredientsScreen() {
               color="textSecondary"
               style={styles.columnLabel}
             >
-              Ingredient
+              Recipe
             </Text>
             <Text
               variant="caption"
               color="textSecondary"
               style={styles.columnLabel}
             >
-              Unit cost
+              Cost / serving
             </Text>
           </View>
 
           <Card style={styles.listCard}>
-            {filteredIngredients.length === 0 ? (
+            {filteredRecipes.length === 0 ? (
               <Text color="textSecondary" style={styles.empty}>
-                {ingredients.length === 0
-                  ? "No ingredients yet."
-                  : "No ingredients match your search."}
+                {recipes.length === 0
+                  ? "No recipes yet."
+                  : "No recipes match your search."}
               </Text>
             ) : (
-              filteredIngredients.map((ingredient, index) => (
-                <View key={ingredient.id}>
-                  {index > 0 ? <View style={styles.divider} /> : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.rowPressed,
-                    ]}
-                    onPress={() => handleOpenIngredient(ingredient)}
-                  >
-                    <View style={styles.rowLeft}>
-                      <Text style={styles.itemName}>{ingredient.name}</Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatPackSize(ingredient)}
-                        {ingredient.supplier ? ` · ${ingredient.supplier}` : ""}
-                      </Text>
-                    </View>
-                    <View style={styles.rowRight}>
-                      <Text style={styles.unitCost}>
-                        {formatPackPrice(ingredient, symbol)}
-                      </Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatUnitCost(ingredient, symbol)}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-              ))
+              filteredRecipes.map((recipe, index) => {
+                const status = getCostStatus(recipe.recipeCost, targetFoodCost);
+
+                return (
+                  <View key={recipe.id}>
+                    {index > 0 ? <View style={styles.divider} /> : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.row,
+                        pressed && styles.rowPressed,
+                      ]}
+                      onPress={() => handleOpenRecipe(recipe)}
+                    >
+                      <View style={styles.rowLeft}>
+                        <Text style={styles.recipeName}>{recipe.name}</Text>
+                        <Text variant="label" color="textSecondary">
+                          {buildRecipeMeta(recipe, symbol)}
+                        </Text>
+                      </View>
+                      <View style={styles.rowRight}>
+                        <Text style={styles.cost}>
+                          {symbol}
+                          {formatPrice(recipe.costPerServing)}
+                        </Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            status === "good" && styles.badgeGood,
+                            status === "warn" && styles.badgeWarn,
+                            status === "over" && styles.badgeOver,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.badgeLabel,
+                              status === "good" && styles.badgeLabelGood,
+                              status === "warn" && styles.badgeLabelWarn,
+                              status === "over" && styles.badgeLabelOver,
+                            ]}
+                          >
+                            {recipe.recipeCost.toFixed(2)}%
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })
             )}
           </Card>
         </View>
       </ScrollView>
 
-      <IngredientView
-        ref={ingredientSheetRef}
-        ingredient={selectedIngredient}
-        categoryName={
-          selectedIngredient
-            ? categoryNameById.get(selectedIngredient.categoryId)
-            : undefined
-        }
+      <RecipeView
+        ref={recipeSheetRef}
+        recipe={selectedRecipe}
         symbol={symbol}
-        onEdit={handleEditIngredient}
-        onDelete={handleDeleteIngredient}
+        targetFoodCost={targetFoodCost}
+        onEdit={handleEditRecipe}
+        onDelete={handleDeleteRecipe}
+        onDismiss={handleDismissRecipeSheet}
       />
     </View>
   );
@@ -457,18 +502,45 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     gap: theme.gap(0.5),
   },
-  itemName: {
+  recipeName: {
     fontSize: theme.fontSize.md,
     fontFamily: theme.fontFamily.semiBold,
     color: theme.colors.text,
   },
   rowRight: {
     alignItems: "flex-end",
-    gap: theme.gap(0.5),
+    gap: theme.gap(0.75),
   },
-  unitCost: {
-    fontSize: theme.fontSize.md,
+  cost: {
+    fontSize: theme.fontSize.sm,
     fontFamily: theme.fontFamily.medium,
     color: theme.colors.text,
+  },
+  badge: {
+    borderRadius: 9999,
+    paddingVertical: theme.gap(0.375),
+    paddingHorizontal: theme.gap(1),
+  },
+  badgeGood: {
+    backgroundColor: "#D9EFE0",
+  },
+  badgeWarn: {
+    backgroundColor: "#F7E4B8",
+  },
+  badgeOver: {
+    backgroundColor: "#F6D5C8",
+  },
+  badgeLabel: {
+    fontSize: theme.fontSize.xs,
+    fontFamily: theme.fontFamily.medium,
+  },
+  badgeLabelGood: {
+    color: "#1F6B3A",
+  },
+  badgeLabelWarn: {
+    color: "#8A5A12",
+  },
+  badgeLabelOver: {
+    color: "#9A3F2A",
   },
 }));

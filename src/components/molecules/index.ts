@@ -1,4 +1,7 @@
 export * from "./BackButton";
+export * from "./BuildVersion";
+export * from "./ButtonGroupView";
+export * from "./DetailRow";
 export * from "./PrefixInput";
 export * from "./SearchInput";
 export * from "./SelectInput";
