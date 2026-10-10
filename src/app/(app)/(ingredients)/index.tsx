@@ -15,6 +15,7 @@ import {
   formatPackSize,
   formatUnitCost,
 } from "@/helpers/unit";
+import { useKeyboard } from "@/hooks";
 import {
   createCategory,
   deleteCategory,
@@ -39,6 +40,7 @@ const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
+  const { dismissKeyboard } = useKeyboard();
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
@@ -124,6 +126,7 @@ export default function IngredientsScreen() {
   }, [categoryNameById, ingredients, query, selectedCategory]);
 
   const handleOpenIngredient = (ingredient: Ingredient) => {
+    dismissKeyboard();
     setSelectedIngredient(ingredient);
     ingredientSheetRef.current?.present();
   };
@@ -243,7 +246,7 @@ export default function IngredientsScreen() {
       ]}
     >
       <ScrollView
-        contentContainerStyle={styles.content(insets.bottom + 8)}
+        contentContainerStyle={styles.content(insets.bottom + 16)}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}

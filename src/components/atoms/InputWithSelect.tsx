@@ -1,4 +1,5 @@
 import { SymbolView } from "expo-symbols";
+import { useCallback, useRef } from "react";
 import {
   TextInput as RNTextInput,
   View,
@@ -6,6 +7,7 @@ import {
 } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
+import { useKeyboard } from "@/hooks";
 import { Select, type SelectOption } from "./Select";
 import { Text } from "./Text";
 
@@ -17,8 +19,10 @@ const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
 }));
 
-interface InputWithSelectProps
-  extends Omit<RNTextInputProps, "style" | "value" | "onChangeText"> {
+interface InputWithSelectProps extends Omit<
+  RNTextInputProps,
+  "style" | "value" | "onChangeText"
+> {
   /** Left side: the value the user types. */
   value: string;
   onChangeText: (text: string) => void;
@@ -43,6 +47,19 @@ export const InputWithSelect = ({
   keyboardType = "decimal-pad",
   ...inputProps
 }: InputWithSelectProps) => {
+  const inputRef = useRef<RNTextInput>(null);
+  const { dismissKeyboard } = useKeyboard();
+
+  const dismissInput = useCallback(() => {
+    inputRef.current?.blur();
+    dismissKeyboard();
+  }, [dismissKeyboard]);
+
+  const handleSelect = (value: string) => {
+    dismissInput();
+    onSelect(value);
+  };
+
   const selectedOption = options.find((option) => option.value === selected);
 
   styles.useVariants({ state });
@@ -51,6 +68,7 @@ export const InputWithSelect = ({
     <View style={styles.container}>
       <UniTextInput
         {...inputProps}
+        ref={inputRef}
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
@@ -61,7 +79,8 @@ export const InputWithSelect = ({
         <Select
           options={options}
           selected={selected}
-          onSelect={onSelect}
+          onSelect={handleSelect}
+          onOpen={dismissInput}
           snapPointsArr={snapPointsArr}
         >
           <View style={styles.trigger}>

@@ -22,6 +22,7 @@ type SelectProps = {
   onSelect: (value: string) => void;
   children: ReactNode;
   snapPointsArr?: string[];
+  onOpen?: () => void;
 };
 
 export const Select = ({
@@ -30,6 +31,7 @@ export const Select = ({
   onSelect,
   children,
   snapPointsArr = ["25%", "50%", "90%"],
+  onOpen,
 }: SelectProps) => {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -74,7 +76,12 @@ export const Select = ({
 
   return (
     <>
-      <Pressable onPress={() => sheetRef.current?.present()}>
+      <Pressable
+        onPress={() => {
+          onOpen?.();
+          sheetRef.current?.present();
+        }}
+      >
         {children}
       </Pressable>
 
