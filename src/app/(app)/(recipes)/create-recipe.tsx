@@ -100,7 +100,7 @@ export default function CreateRecipeScreen() {
   const [categoryOptions, setCategoryOptions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [yieldCount, setYieldCount] = useState(1);
+  const [servings, setServings] = useState(1);
   const [price, setPrice] = useState("");
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<
@@ -144,12 +144,34 @@ export default function CreateRecipeScreen() {
     [ingredients],
   );
 
-  const servingPrice = toNumber(price);
-  const costPerServing = batchCost / Math.max(yieldCount, 1);
-  const hasPrice = servingPrice > 0;
-  const foodCostPercent = hasPrice ? (costPerServing / servingPrice) * 100 : 0;
-  const profitPerServing = servingPrice - costPerServing;
-  const status = getCostStatus(foodCostPercent, targetFoodCost);
+  const {
+    costPerServing,
+    recipeCost,
+    profitPerServing,
+    marginProfit,
+    hasPrice,
+  } = useMemo(() => {
+    const pricePerServing = toNumber(price);
+    const costPerServing = batchCost / Math.max(servings, 1);
+    const hasPrice = pricePerServing > 0;
+    const recipeCost = hasPrice
+      ? (costPerServing / pricePerServing) * 100
+      : 0;
+    const profitPerServing = pricePerServing - costPerServing;
+    const marginProfit = hasPrice
+      ? (profitPerServing / pricePerServing) * 100
+      : 0;
+
+    return {
+      costPerServing,
+      recipeCost,
+      profitPerServing,
+      marginProfit,
+      hasPrice,
+    };
+  }, [batchCost, servings, price]);
+
+  const status = getCostStatus(recipeCost, targetFoodCost);
 
   const addIngredient = (ingredient: Ingredient) => {
     const unit = getIngredientUseUnit(ingredient);
@@ -219,9 +241,13 @@ export default function CreateRecipeScreen() {
     console.log("Create recipe", {
       name,
       categoryId,
-      yieldCount,
+      servings,
       price,
       ingredients,
+      costPerServing,
+      recipeCost,
+      profitPerServing,
+      marginProfit,
     });
   };
 
@@ -295,10 +321,10 @@ export default function CreateRecipeScreen() {
                   Yield
                 </Text>
                 <StepperInput
-                  value={yieldCount}
-                  onChange={setYieldCount}
+                  value={servings}
+                  onChange={setServings}
                   min={1}
-                  suffix={yieldCount === 1 ? " serving" : " servings"}
+                  suffix={servings === 1 ? " serving" : " servings"}
                   style={styles.yieldStepper}
                 />
               </View>
@@ -445,7 +471,7 @@ export default function CreateRecipeScreen() {
                   Food cost
                 </Text>
                 <Text style={styles.summaryValue}>
-                  {hasPrice ? `${foodCostPercent.toFixed(1)}%` : "—"}
+                  {hasPrice ? `${recipeCost.toFixed(1)}%` : "—"}
                 </Text>
               </View>
               <View style={[styles.summaryItem, styles.summaryItemRight]}>
@@ -467,7 +493,7 @@ export default function CreateRecipeScreen() {
                   status === "good" && styles.fillGood,
                   status === "warn" && styles.fillWarn,
                   status === "over" && styles.fillOver,
-                  { width: `${Math.min(foodCostPercent, 100)}%` },
+                  { width: `${Math.min(recipeCost, 100)}%` },
                 ]}
               />
               <View
