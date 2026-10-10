@@ -22,7 +22,7 @@ import {
 import { PrefixInput, SearchInput, TextInput } from "@/components/molecules";
 
 import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
-import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
+import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers/money";
 import { costUnitLabel, unitLabel } from "@/helpers/unit";
 import { getCategories } from "@/service/api/categories";
 import { getIngredients } from "@/service/api/ingredients";
@@ -101,7 +101,7 @@ export default function CreateRecipeScreen() {
     { label: string; value: string }[]
   >([]);
   const [servings, setServings] = useState(1);
-  const [price, setPrice] = useState("");
+  const [price, setPrice] = useState(0);
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<
     Ingredient[]
@@ -151,15 +151,15 @@ export default function CreateRecipeScreen() {
     marginProfit,
     hasPrice,
   } = useMemo(() => {
-    const pricePerServing = toNumber(price);
-    const costPerServing = batchCost / Math.max(servings, 1);
+    const pricePerServing = price;
     const hasPrice = pricePerServing > 0;
+    const costPerServing = roundTo2(batchCost / Math.max(servings, 1));
     const recipeCost = hasPrice
-      ? (costPerServing / pricePerServing) * 100
+      ? roundTo2((costPerServing / pricePerServing) * 100)
       : 0;
-    const profitPerServing = pricePerServing - costPerServing;
+    const profitPerServing = roundTo2(pricePerServing - costPerServing);
     const marginProfit = hasPrice
-      ? (profitPerServing / pricePerServing) * 100
+      ? roundTo2((profitPerServing / pricePerServing) * 100)
       : 0;
 
     return {
@@ -332,9 +332,9 @@ export default function CreateRecipeScreen() {
                 <PrefixInput
                   label="Price per serving"
                   prefix={symbol}
-                  value={price}
+                  value={price === 0 ? "" : String(price)}
                   onChangeText={(value) => {
-                    setPrice(value);
+                    setPrice(roundTo2(toNumber(value)));
                     clearError("price");
                   }}
                   placeholder="0.00"
@@ -471,7 +471,7 @@ export default function CreateRecipeScreen() {
                   Food cost
                 </Text>
                 <Text style={styles.summaryValue}>
-                  {hasPrice ? `${recipeCost.toFixed(1)}%` : "—"}
+                  {hasPrice ? `${recipeCost.toFixed(2)}%` : "—"}
                 </Text>
               </View>
               <View style={[styles.summaryItem, styles.summaryItemRight]}>
