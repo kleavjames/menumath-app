@@ -16,6 +16,7 @@ import {
   Card,
   InputWithPrefix,
   Pill,
+  showToast,
   StepperInput,
   Text,
 } from "@/components/atoms";
@@ -26,9 +27,11 @@ import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers/money";
 import { costUnitLabel, unitLabel } from "@/helpers/unit";
 import { getCategories } from "@/service/api/categories";
 import { getIngredients } from "@/service/api/ingredients";
+import { createRecipe } from "@/service/api/recipes";
 import { useAccountUserStore } from "@/store/accountUser";
 import { CategoryType, Currency, MetricUnit } from "@/types/business";
-import { Ingredient } from "@/types/ingredient";
+import { ApiError } from "@/types/common";
+import { Ingredient, RecipeIngredient } from "@/types/ingredient";
 
 const DEFAULT_TARGET_FOOD_COST = 30;
 
@@ -36,15 +39,6 @@ type FieldErrors = {
   name?: string;
   price?: string;
   ingredients?: string;
-};
-
-type RecipeIngredient = {
-  ingredientId: string;
-  quantity: string;
-  /** Unit the quantity is entered in (same unit as `usableCostPerItem` on the ingredient). */
-  unit: MetricUnit;
-  /** Total cost for this ingredient in the recipe: quantity × usable unit rate. */
-  pricePerUnit: number;
 };
 
 type CostStatus = "good" | "warn" | "over";
@@ -63,10 +57,8 @@ const getIngredientUseUnit = (ingredient: Ingredient): MetricUnit => {
 const getUnitRate = (ingredient: Ingredient) =>
   toNumber(ingredient.usableCostPerItem);
 
-const getIngredientUsePrice = (
-  quantity: string,
-  ingredient: Ingredient,
-) => toNumber(quantity) * getUnitRate(ingredient);
+const getIngredientUsePrice = (quantity: string, ingredient: Ingredient) =>
+  toNumber(quantity) * getUnitRate(ingredient);
 
 const getCostStatus = (percent: number, target: number): CostStatus => {
   if (percent <= target) return "good";
@@ -191,7 +183,9 @@ export default function CreateRecipeScreen() {
 
   const updateIngredient = (
     ingredientId: string,
-    changes: Partial<Pick<RecipeIngredient, "quantity" | "unit" | "pricePerUnit">>,
+    changes: Partial<
+      Pick<RecipeIngredient, "quantity" | "unit" | "pricePerUnit">
+    >,
   ) => {
     setIngredients((prev) =>
       prev.map((line) => {
@@ -234,21 +228,31 @@ export default function CreateRecipeScreen() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
 
-    // TODO: persist the recipe once the recipes API is available.
-    console.log("Create recipe", {
-      name,
-      categoryId,
-      servings,
-      price,
-      ingredients,
-      costPerServing,
-      recipeCost,
-      profitPerServing,
-      marginProfit,
-    });
+    try {
+      await createRecipe({
+        businessId: businessId!,
+        categoryId: categoryId!,
+        name,
+        servings,
+        pricePerServing: price,
+        costPerServing,
+        recipeCost,
+        profit: profitPerServing,
+        margin: marginProfit,
+        ingredients,
+      });
+      showToast("Recipe created successfully", { variant: "default" });
+      router.push("/(app)/(recipes)");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unexpected error occurred", { variant: "error" });
+      }
+    }
   };
 
   return (

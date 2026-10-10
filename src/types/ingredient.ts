@@ -13,3 +13,10 @@ export interface Ingredient {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RecipeIngredient {
+  ingredientId: string;
+  quantity: string;
+  unit: MetricUnit;
+  pricePerUnit: number;
+}
