@@ -26,3 +26,9 @@ export interface RecipeIngredient {
   unit: MetricUnit;
   ingredient: Ingredient;
 }
+
+/** Method step sent when creating or updating a recipe. */
+export interface RecipeStepPayload {
+  order: number;
+  text: string;
+}

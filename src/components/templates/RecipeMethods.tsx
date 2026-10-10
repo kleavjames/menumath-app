@@ -1,5 +1,5 @@
 import { SymbolView } from "expo-symbols";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Pressable, TextInput as RNTextInput, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -8,6 +8,11 @@ import { Card, Text } from "@/components/atoms";
 export type MethodStep = {
   id: number;
   text: string;
+};
+
+export type RecipeMethodsProps = {
+  steps: MethodStep[];
+  onChange: (steps: MethodStep[]) => void;
 };
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
@@ -26,35 +31,32 @@ const UniTextInput = withUnistyles(RNTextInput, (theme) => ({
   placeholderTextColor: theme.colors.textSecondary,
 }));
 
-export const RecipeMethods = () => {
-  const [steps, setSteps] = useState<MethodStep[]>([]);
+export const RecipeMethods = ({ steps, onChange }: RecipeMethodsProps) => {
   const nextStepId = useRef(1);
 
   const addStep = () => {
-    setSteps((prev) => [...prev, { id: nextStepId.current++, text: "" }]);
+    onChange([...steps, { id: nextStepId.current++, text: "" }]);
   };
 
   const updateStep = (stepId: number, text: string) => {
-    setSteps((prev) =>
-      prev.map((step) => (step.id === stepId ? { ...step, text } : step)),
+    onChange(
+      steps.map((step) => (step.id === stepId ? { ...step, text } : step)),
     );
   };
 
   const removeStep = (stepId: number) => {
-    setSteps((prev) => prev.filter((step) => step.id !== stepId));
+    onChange(steps.filter((step) => step.id !== stepId));
   };
 
   const moveStep = (fromIndex: number, direction: -1 | 1) => {
-    setSteps((prev) => {
-      const toIndex = fromIndex + direction;
-      if (toIndex < 0 || toIndex >= prev.length) return prev;
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= steps.length) return;
 
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      if (!moved) return prev;
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
+    const next = [...steps];
+    const [moved] = next.splice(fromIndex, 1);
+    if (!moved) return;
+    next.splice(toIndex, 0, moved);
+    onChange(next);
   };
 
   return (

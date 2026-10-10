@@ -1,38 +1,32 @@
 import { router, Stack } from "expo-router";
-import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StyleSheet, withUnistyles } from "react-native-unistyles";
+import { StyleSheet } from "react-native-unistyles";
 
+import { Pill, showToast, StepperInput, Text } from "@/components/atoms";
+import { PrefixInput, TextInput } from "@/components/molecules";
+import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
 import {
-  Card,
-  InputWithPrefix,
-  Pill,
-  showToast,
-  StepperInput,
-  Text,
-} from "@/components/atoms";
-import { PrefixInput, SearchInput, TextInput } from "@/components/molecules";
-import { RecipeMethods } from "@/components/templates/RecipeMethods";
+  MethodStep,
+  RecipeMethods,
+} from "@/components/templates/RecipeMethods";
 
-import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
+import { CURRENCY_SYMBOLS } from "@/constants/units";
 import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers/money";
-import { costUnitLabel, unitLabel } from "@/helpers/unit";
 import { getCategories } from "@/service/api/categories";
-import { getIngredients } from "@/service/api/ingredients";
 import { createRecipe } from "@/service/api/recipes";
 import { useAccountUserStore } from "@/store/accountUser";
-import { CategoryType, Currency, MetricUnit } from "@/types/business";
+import { CategoryType, Currency } from "@/types/business";
 import { ApiError } from "@/types/common";
-import { Ingredient, RecipeIngredientPayload } from "@/types/ingredient";
+import { RecipeIngredientPayload } from "@/types/ingredient";
+import { RecipeStepPayload } from "@/types/recipe";
 
 const DEFAULT_TARGET_FOOD_COST = 30;
 
@@ -44,36 +38,19 @@ type FieldErrors = {
 
 type CostStatus = "good" | "warn" | "over";
 
-/** Unit that `usableCostPerItem` is priced in (e.g. kg → g, L → mL). */
-const getIngredientUseUnit = (ingredient: Ingredient): MetricUnit => {
-  const option = UNIT_OPTIONS.find(
-    (item) => item.value === ingredient.itemSizeUnit,
-  );
-  return (
-    (option?.subUnit?.label as MetricUnit | undefined) ??
-    ingredient.itemSizeUnit
-  );
-};
-
-const getUnitRate = (ingredient: Ingredient) =>
-  toNumber(ingredient.usableCostPerItem);
-
-const getIngredientUsePrice = (quantity: string, ingredient: Ingredient) =>
-  toNumber(quantity) * getUnitRate(ingredient);
-
 const getCostStatus = (percent: number, target: number): CostStatus => {
   if (percent <= target) return "good";
   if (percent <= target + 5) return "warn";
   return "over";
 };
 
-const UniSymbol = withUnistyles(SymbolView, (theme) => ({
-  tintColor: theme.colors.text,
-}));
-
-const UniSymbolMuted = withUnistyles(SymbolView, (theme) => ({
-  tintColor: theme.colors.textSecondary,
-}));
+const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStepPayload[] =>
+  steps
+    .map((step, index) => ({
+      order: index + 1,
+      text: step.text.trim(),
+    }))
+    .filter((step) => step.text.length > 0);
 
 export default function CreateRecipeScreen() {
   const insets = useSafeAreaInsets();
@@ -96,10 +73,7 @@ export default function CreateRecipeScreen() {
   const [servings, setServings] = useState(1);
   const [price, setPrice] = useState(0);
   const [ingredients, setIngredients] = useState<RecipeIngredientPayload[]>([]);
-  const [availableIngredients, setAvailableIngredients] = useState<
-    Ingredient[]
-  >([]);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [methodSteps, setMethodSteps] = useState<MethodStep[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -112,10 +86,6 @@ export default function CreateRecipeScreen() {
         ),
       )
       .catch((error) => console.error(error));
-
-    getIngredients(businessId, CategoryType.INGREDIENT)
-      .then(setAvailableIngredients)
-      .catch((error) => console.error(error));
   }, [businessId]);
 
   const clearError = (field: keyof FieldErrors) => {
@@ -126,11 +96,6 @@ export default function CreateRecipeScreen() {
       return next;
     });
   };
-
-  const ingredientById = useMemo(
-    () => new Map(availableIngredients.map((item) => [item.id, item])),
-    [availableIngredients],
-  );
 
   const batchCost = useMemo(
     () => ingredients.reduce((sum, line) => sum + line.pricePerUnit, 0),
@@ -166,50 +131,11 @@ export default function CreateRecipeScreen() {
 
   const status = getCostStatus(recipeCost, targetFoodCost);
 
-  const addIngredient = (ingredient: Ingredient) => {
-    const unit = getIngredientUseUnit(ingredient);
-
-    setIngredients((prev) => [
-      ...prev,
-      {
-        ingredientId: ingredient.id,
-        quantity: "",
-        unit,
-        pricePerUnit: 0,
-      },
-    ]);
-    clearError("ingredients");
-    setIsPickerOpen(false);
-  };
-
-  const updateIngredient = (
-    ingredientId: string,
-    changes: Partial<
-      Pick<RecipeIngredientPayload, "quantity" | "unit" | "pricePerUnit">
-    >,
-  ) => {
-    setIngredients((prev) =>
-      prev.map((line) => {
-        if (line.ingredientId !== ingredientId) return line;
-
-        const next = { ...line, ...changes };
-
-        if (changes.quantity !== undefined) {
-          const source = ingredientById.get(ingredientId);
-          if (source) {
-            next.pricePerUnit = getIngredientUsePrice(next.quantity, source);
-          }
-        }
-
-        return next;
-      }),
-    );
-  };
-
-  const removeRecipeIngredient = (ingredientId: string) => {
-    setIngredients((prev) =>
-      prev.filter((line) => line.ingredientId !== ingredientId),
-    );
+  const handleIngredientsChange = (next: RecipeIngredientPayload[]) => {
+    setIngredients(next);
+    if (next.length > 0) {
+      clearError("ingredients");
+    }
   };
 
   const validate = (): boolean => {
@@ -232,6 +158,8 @@ export default function CreateRecipeScreen() {
   const handleSave = async () => {
     if (!validate()) return;
 
+    const steps = toRecipeStepsPayload(methodSteps);
+
     try {
       await createRecipe({
         businessId: businessId!,
@@ -244,6 +172,7 @@ export default function CreateRecipeScreen() {
         profit: profitPerServing,
         margin: marginProfit,
         ingredients,
+        steps,
       });
       showToast("Recipe created successfully", { variant: "default" });
       router.push("/(app)/(recipes)");
@@ -348,118 +277,15 @@ export default function CreateRecipeScreen() {
               </View>
             </View>
 
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Ingredients</Text>
-                <Text variant="label" color="textSecondary">
-                  Batch{" "}
-                  <Text style={styles.batchValue}>
-                    {symbol}
-                    {formatPrice(batchCost)}
-                  </Text>
-                </Text>
-              </View>
+            <RecipeIngredient
+              businessId={businessId}
+              symbol={symbol}
+              ingredients={ingredients}
+              onChange={handleIngredientsChange}
+              error={errors.ingredients}
+            />
 
-              {ingredients.length === 0 ? (
-                <View
-                  style={[
-                    styles.emptyCard,
-                    errors.ingredients ? styles.emptyCardError : null,
-                  ]}
-                >
-                  <Text color="textSecondary" style={styles.emptyText}>
-                    Add ingredients and quantities to calculate the cost of this
-                    recipe.
-                  </Text>
-                </View>
-              ) : (
-                <Card style={styles.linesCard}>
-                  {ingredients.map((line, index) => {
-                    const ingredient = ingredientById.get(line.ingredientId);
-                    if (!ingredient) return null;
-
-                    const unitLabelText = unitLabel(line.unit);
-                    const unitRate = getUnitRate(ingredient);
-
-                    return (
-                      <View key={line.ingredientId}>
-                        {index > 0 ? <View style={styles.divider} /> : null}
-                        <View style={styles.line}>
-                          <View style={styles.lineInfo}>
-                            <Text style={styles.lineName} numberOfLines={1}>
-                              {ingredient.name}
-                            </Text>
-                            <Text variant="caption" color="textSecondary">
-                              {symbol}
-                              {formatAmount(unitRate)} / {unitLabelText}
-                            </Text>
-                          </View>
-
-                          <View style={styles.lineQuantity}>
-                            <InputWithPrefix
-                              value={line.quantity}
-                              onChangeText={(value) =>
-                                updateIngredient(line.ingredientId, {
-                                  quantity: value,
-                                })
-                              }
-                              placeholder="0"
-                              suffix={unitLabelText}
-                            />
-                          </View>
-
-                          <Text style={styles.lineCost}>
-                            {symbol}
-                            {formatPrice(line.pricePerUnit)}
-                          </Text>
-
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Remove ${ingredient.name}`}
-                            hitSlop={8}
-                            onPress={() =>
-                              removeRecipeIngredient(line.ingredientId)
-                            }
-                          >
-                            <UniSymbolMuted
-                              name={{
-                                ios: "xmark.circle.fill",
-                                android: "cancel",
-                                web: "cancel",
-                              }}
-                              size={18}
-                            />
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </Card>
-              )}
-
-              {errors.ingredients ? (
-                <Text variant="caption" color="error">
-                  {errors.ingredients}
-                </Text>
-              ) : null}
-
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.addButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setIsPickerOpen(true)}
-              >
-                <UniSymbol
-                  name={{ ios: "plus", android: "add", web: "add" }}
-                  size={14}
-                />
-                <Text style={styles.addButtonLabel}>Add ingredient</Text>
-              </Pressable>
-            </View>
-
-            <RecipeMethods />
+            <RecipeMethods steps={methodSteps} onChange={setMethodSteps} />
           </ScrollView>
 
           <View style={styles.summary(insets.bottom + 16)}>
@@ -521,127 +347,9 @@ export default function CreateRecipeScreen() {
           </View>
         </KeyboardAvoidingView>
       </View>
-
-      <IngredientPicker
-        visible={isPickerOpen}
-        symbol={symbol}
-        ingredients={availableIngredients}
-        selectedIds={ingredients.map(({ ingredientId }) => ingredientId)}
-        onSelect={addIngredient}
-        onClose={() => setIsPickerOpen(false)}
-      />
     </>
   );
 }
-
-interface IngredientPickerProps {
-  visible: boolean;
-  symbol: string;
-  ingredients: Ingredient[];
-  selectedIds: string[];
-  onSelect: (ingredient: Ingredient) => void;
-  onClose: () => void;
-}
-
-const IngredientPicker = ({
-  visible,
-  symbol,
-  ingredients,
-  selectedIds,
-  onSelect,
-  onClose,
-}: IngredientPickerProps) => {
-  const [query, setQuery] = useState("");
-
-  const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    return ingredients.filter(
-      ({ id, name }) =>
-        !selectedIds.includes(id) &&
-        (!normalizedQuery || name.toLowerCase().includes(normalizedQuery)),
-    );
-  }, [ingredients, selectedIds, query]);
-
-  const handleClose = () => {
-    setQuery("");
-    onClose();
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-      onDismiss={() => setQuery("")}
-    >
-      <View style={styles.pickerScreen}>
-        <View style={styles.pickerHeader}>
-          <Text variant="title">Add ingredient</Text>
-          <Pressable onPress={handleClose} hitSlop={8}>
-            <Text color="primary" style={styles.pickerClose}>
-              Done
-            </Text>
-          </Pressable>
-        </View>
-
-        <SearchInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search ingredients"
-        />
-
-        <ScrollView
-          contentContainerStyle={styles.pickerContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {results.length === 0 ? (
-            <Text color="textSecondary" style={styles.pickerEmpty}>
-              {ingredients.length === 0
-                ? "No ingredients yet. Add some from the ingredients tab."
-                : "No ingredients to add."}
-            </Text>
-          ) : (
-            <Card style={styles.linesCard}>
-              {results.map((ingredient, index) => (
-                <View key={ingredient.id}>
-                  {index > 0 ? <View style={styles.divider} /> : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.pickerRow,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => {
-                      setQuery("");
-                      onSelect(ingredient);
-                    }}
-                  >
-                    <View style={styles.lineInfo}>
-                      <Text style={styles.lineName}>{ingredient.name}</Text>
-                      <Text variant="caption" color="textSecondary">
-                        {symbol}
-                        {formatAmount(
-                          toNumber(ingredient.usableCostPerItem),
-                        )} / {costUnitLabel(ingredient.itemSizeUnit)}
-                      </Text>
-                    </View>
-                    <UniSymbol
-                      name={{ ios: "plus", android: "add", web: "add" }}
-                      size={16}
-                    />
-                  </Pressable>
-                </View>
-              ))}
-            </Card>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-};
 
 const styles = StyleSheet.create((theme) => ({
   flex: {
@@ -686,92 +394,6 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: "stretch",
     justifyContent: "space-between",
     paddingVertical: theme.gap(1.5),
-  },
-  section: {
-    gap: theme.gap(1.5),
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    fontSize: theme.fontSize.md,
-    fontFamily: theme.fontFamily.semiBold,
-    color: theme.colors.text,
-  },
-  batchValue: {
-    fontSize: theme.fontSize.sm,
-    fontFamily: theme.fontFamily.semiBold,
-    color: theme.colors.text,
-  },
-  emptyCard: {
-    backgroundColor: theme.colors.border,
-    borderWidth: 1,
-    borderColor: "transparent",
-    borderRadius: theme.borderRadius.xl,
-    paddingVertical: theme.gap(3),
-    paddingHorizontal: theme.gap(3),
-  },
-  emptyCardError: {
-    borderColor: theme.colors.error,
-  },
-  emptyText: {
-    textAlign: "center",
-  },
-  linesCard: {
-    padding: 0,
-    gap: 0,
-    overflow: "hidden",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  line: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.gap(1.5),
-    paddingVertical: theme.gap(1.5),
-    paddingHorizontal: theme.gap(2),
-  },
-  lineInfo: {
-    flex: 1,
-    gap: theme.gap(0.5),
-  },
-  lineName: {
-    fontSize: theme.fontSize.md,
-    fontFamily: theme.fontFamily.semiBold,
-    color: theme.colors.text,
-  },
-  lineQuantity: {
-    width: 104,
-  },
-  lineCost: {
-    minWidth: theme.gap(7),
-    textAlign: "right",
-    fontSize: theme.fontSize.sm,
-    fontFamily: theme.fontFamily.medium,
-    color: theme.colors.text,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.gap(1),
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: theme.colors.textSecondary,
-    borderRadius: theme.borderRadius.xl,
-    paddingVertical: theme.gap(2),
-  },
-  addButtonLabel: {
-    fontSize: theme.fontSize.md,
-    fontFamily: theme.fontFamily.medium,
-    color: theme.colors.text,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   summary: (bottom: number) => ({
     gap: theme.gap(1),
@@ -831,33 +453,5 @@ const styles = StyleSheet.create((theme) => ({
   trackLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  pickerScreen: {
-    flex: 1,
-    gap: theme.gap(2),
-    backgroundColor: theme.colors.surface,
-    padding: theme.gap(3),
-  },
-  pickerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  pickerClose: {
-    fontFamily: theme.fontFamily.semiBold,
-  },
-  pickerContent: {
-    paddingBottom: theme.gap(3),
-  },
-  pickerEmpty: {
-    textAlign: "center",
-    paddingVertical: theme.gap(4),
-  },
-  pickerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.gap(2),
-    paddingVertical: theme.gap(2),
-    paddingHorizontal: theme.gap(2.5),
   },
 }));
