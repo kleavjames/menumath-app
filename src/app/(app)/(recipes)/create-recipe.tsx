@@ -21,13 +21,13 @@ import {
 } from "@/components/atoms";
 import { PrefixInput, SearchInput, TextInput } from "@/components/molecules";
 
-import { CURRENCY_SYMBOLS } from "@/constants/units";
+import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
 import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
-import { costUnitLabel } from "@/helpers/unit";
+import { costUnitLabel, unitLabel } from "@/helpers/unit";
 import { getCategories } from "@/service/api/categories";
 import { getIngredients } from "@/service/api/ingredients";
 import { useAccountUserStore } from "@/store/accountUser";
-import { CategoryType, Currency } from "@/types/business";
+import { CategoryType, Currency, MetricUnit } from "@/types/business";
 import { Ingredient } from "@/types/ingredient";
 
 const DEFAULT_TARGET_FOOD_COST = 30;
@@ -38,12 +38,35 @@ type FieldErrors = {
   ingredients?: string;
 };
 
-type RecipeLine = {
-  ingredient: Ingredient;
+type RecipeIngredient = {
+  ingredientId: string;
   quantity: string;
+  /** Unit the quantity is entered in (same unit as `usableCostPerItem` on the ingredient). */
+  unit: MetricUnit;
+  /** Total cost for this ingredient in the recipe: quantity × usable unit rate. */
+  pricePerUnit: number;
 };
 
 type CostStatus = "good" | "warn" | "over";
+
+/** Unit that `usableCostPerItem` is priced in (e.g. kg → g, L → mL). */
+const getIngredientUseUnit = (ingredient: Ingredient): MetricUnit => {
+  const option = UNIT_OPTIONS.find(
+    (item) => item.value === ingredient.itemSizeUnit,
+  );
+  return (
+    (option?.subUnit?.label as MetricUnit | undefined) ??
+    ingredient.itemSizeUnit
+  );
+};
+
+const getUnitRate = (ingredient: Ingredient) =>
+  toNumber(ingredient.usableCostPerItem);
+
+const getIngredientUsePrice = (
+  quantity: string,
+  ingredient: Ingredient,
+) => toNumber(quantity) * getUnitRate(ingredient);
 
 const getCostStatus = (percent: number, target: number): CostStatus => {
   if (percent <= target) return "good";
@@ -79,7 +102,7 @@ export default function CreateRecipeScreen() {
   >([]);
   const [yieldCount, setYieldCount] = useState(1);
   const [price, setPrice] = useState("");
-  const [lines, setLines] = useState<RecipeLine[]>([]);
+  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<
     Ingredient[]
   >([]);
@@ -111,14 +134,14 @@ export default function CreateRecipeScreen() {
     });
   };
 
+  const ingredientById = useMemo(
+    () => new Map(availableIngredients.map((item) => [item.id, item])),
+    [availableIngredients],
+  );
+
   const batchCost = useMemo(
-    () =>
-      lines.reduce(
-        (sum, { ingredient, quantity }) =>
-          sum + toNumber(quantity) * toNumber(ingredient.usableCostPerItem),
-        0,
-      ),
-    [lines],
+    () => ingredients.reduce((sum, line) => sum + line.pricePerUnit, 0),
+    [ingredients],
   );
 
   const servingPrice = toNumber(price);
@@ -129,22 +152,46 @@ export default function CreateRecipeScreen() {
   const status = getCostStatus(foodCostPercent, targetFoodCost);
 
   const addIngredient = (ingredient: Ingredient) => {
-    setLines((prev) => [...prev, { ingredient, quantity: "" }]);
+    const unit = getIngredientUseUnit(ingredient);
+
+    setIngredients((prev) => [
+      ...prev,
+      {
+        ingredientId: ingredient.id,
+        quantity: "",
+        unit,
+        pricePerUnit: 0,
+      },
+    ]);
     clearError("ingredients");
     setIsPickerOpen(false);
   };
 
-  const updateQuantity = (ingredientId: string, quantity: string) => {
-    setLines((prev) =>
-      prev.map((line) =>
-        line.ingredient.id === ingredientId ? { ...line, quantity } : line,
-      ),
+  const updateIngredient = (
+    ingredientId: string,
+    changes: Partial<Pick<RecipeIngredient, "quantity" | "unit" | "pricePerUnit">>,
+  ) => {
+    setIngredients((prev) =>
+      prev.map((line) => {
+        if (line.ingredientId !== ingredientId) return line;
+
+        const next = { ...line, ...changes };
+
+        if (changes.quantity !== undefined) {
+          const source = ingredientById.get(ingredientId);
+          if (source) {
+            next.pricePerUnit = getIngredientUsePrice(next.quantity, source);
+          }
+        }
+
+        return next;
+      }),
     );
   };
 
-  const removeIngredient = (ingredientId: string) => {
-    setLines((prev) =>
-      prev.filter((line) => line.ingredient.id !== ingredientId),
+  const removeRecipeIngredient = (ingredientId: string) => {
+    setIngredients((prev) =>
+      prev.filter((line) => line.ingredientId !== ingredientId),
     );
   };
 
@@ -157,7 +204,7 @@ export default function CreateRecipeScreen() {
     if (!hasPrice) {
       next.price = "Enter a price";
     }
-    if (lines.length === 0) {
+    if (ingredients.length === 0) {
       next.ingredients = "Add at least one ingredient";
     }
 
@@ -169,6 +216,13 @@ export default function CreateRecipeScreen() {
     if (!validate()) return;
 
     // TODO: persist the recipe once the recipes API is available.
+    console.log("Create recipe", {
+      name,
+      categoryId,
+      yieldCount,
+      price,
+      ingredients,
+    });
   };
 
   return (
@@ -275,7 +329,7 @@ export default function CreateRecipeScreen() {
                 </Text>
               </View>
 
-              {lines.length === 0 ? (
+              {ingredients.length === 0 ? (
                 <View
                   style={[
                     styles.emptyCard,
@@ -289,13 +343,15 @@ export default function CreateRecipeScreen() {
                 </View>
               ) : (
                 <Card style={styles.linesCard}>
-                  {lines.map(({ ingredient, quantity }, index) => {
-                    const unitCost = toNumber(ingredient.usableCostPerItem);
-                    const unit = costUnitLabel(ingredient.itemSizeUnit);
-                    const lineCost = toNumber(quantity) * unitCost;
+                  {ingredients.map((line, index) => {
+                    const ingredient = ingredientById.get(line.ingredientId);
+                    if (!ingredient) return null;
+
+                    const unitLabelText = unitLabel(line.unit);
+                    const unitRate = getUnitRate(ingredient);
 
                     return (
-                      <View key={ingredient.id}>
+                      <View key={line.ingredientId}>
                         {index > 0 ? <View style={styles.divider} /> : null}
                         <View style={styles.line}>
                           <View style={styles.lineInfo}>
@@ -304,31 +360,35 @@ export default function CreateRecipeScreen() {
                             </Text>
                             <Text variant="caption" color="textSecondary">
                               {symbol}
-                              {formatAmount(unitCost)} / {unit}
+                              {formatAmount(unitRate)} / {unitLabelText}
                             </Text>
                           </View>
 
                           <View style={styles.lineQuantity}>
                             <InputWithPrefix
-                              value={quantity}
+                              value={line.quantity}
                               onChangeText={(value) =>
-                                updateQuantity(ingredient.id, value)
+                                updateIngredient(line.ingredientId, {
+                                  quantity: value,
+                                })
                               }
                               placeholder="0"
-                              suffix={unit}
+                              suffix={unitLabelText}
                             />
                           </View>
 
                           <Text style={styles.lineCost}>
                             {symbol}
-                            {formatPrice(lineCost)}
+                            {formatPrice(line.pricePerUnit)}
                           </Text>
 
                           <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={`Remove ${ingredient.name}`}
                             hitSlop={8}
-                            onPress={() => removeIngredient(ingredient.id)}
+                            onPress={() =>
+                              removeRecipeIngredient(line.ingredientId)
+                            }
                           >
                             <UniSymbolMuted
                               name={{
@@ -433,7 +493,7 @@ export default function CreateRecipeScreen() {
         visible={isPickerOpen}
         symbol={symbol}
         ingredients={availableIngredients}
-        selectedIds={lines.map(({ ingredient }) => ingredient.id)}
+        selectedIds={ingredients.map(({ ingredientId }) => ingredientId)}
         onSelect={addIngredient}
         onClose={() => setIsPickerOpen(false)}
       />
