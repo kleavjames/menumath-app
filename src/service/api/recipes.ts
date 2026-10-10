@@ -1,5 +1,7 @@
+import { parseRecipe } from "@/helpers/recipe";
 import { ApiError, ApiErrorPayload } from "@/types/common";
-import { RecipeIngredient } from "@/types/ingredient";
+import { RecipeIngredientPayload } from "@/types/ingredient";
+import { Recipe } from "@/types/recipe";
 import client from "./client";
 
 export interface CreateRecipePayload {
@@ -12,11 +14,11 @@ export interface CreateRecipePayload {
   recipeCost: number;
   profit: number;
   margin: number;
-  ingredients: RecipeIngredient[];
+  ingredients: RecipeIngredientPayload[];
 }
 
 export const createRecipe = async (payload: CreateRecipePayload) => {
-  const response = await client.post<any | ApiErrorPayload>(
+  const response = await client.post<Recipe | ApiErrorPayload>(
     "/recipes",
     payload,
   );
@@ -26,5 +28,18 @@ export const createRecipe = async (payload: CreateRecipePayload) => {
     throw new ApiError(payload);
   }
 
-  return response.data as any;
+  return parseRecipe(response.data as Recipe);
+};
+
+export const getRecipes = async (businessId: string) => {
+  const response = await client.get<Recipe[] | ApiErrorPayload>(
+    `/recipes?businessId=${businessId}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return (response.data as Recipe[]).map(parseRecipe);
 };

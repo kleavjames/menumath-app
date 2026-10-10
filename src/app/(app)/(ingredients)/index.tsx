@@ -273,7 +273,7 @@ export default function IngredientsScreen() {
               <Text style={styles.newButtonLabel}>New</Text>
             </Pressable>
           </View>
-          <Text color="textSecondary">
+          <Text color="textSecondary" variant="label">
             {ingredients.length} items · prices in {currency}
           </Text>
         </View>

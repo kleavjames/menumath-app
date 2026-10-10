@@ -14,7 +14,7 @@ export interface Ingredient {
   updatedAt: string;
 }
 
-export interface RecipeIngredient {
+export interface RecipeIngredientPayload {
   ingredientId: string;
   quantity: string;
   unit: MetricUnit;

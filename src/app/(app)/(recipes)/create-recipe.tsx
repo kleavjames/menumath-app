@@ -31,7 +31,7 @@ import { createRecipe } from "@/service/api/recipes";
 import { useAccountUserStore } from "@/store/accountUser";
 import { CategoryType, Currency, MetricUnit } from "@/types/business";
 import { ApiError } from "@/types/common";
-import { Ingredient, RecipeIngredient } from "@/types/ingredient";
+import { Ingredient, RecipeIngredientPayload } from "@/types/ingredient";
 
 const DEFAULT_TARGET_FOOD_COST = 30;
 
@@ -94,7 +94,7 @@ export default function CreateRecipeScreen() {
   >([]);
   const [servings, setServings] = useState(1);
   const [price, setPrice] = useState(0);
-  const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+  const [ingredients, setIngredients] = useState<RecipeIngredientPayload[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<
     Ingredient[]
   >([]);
@@ -184,7 +184,7 @@ export default function CreateRecipeScreen() {
   const updateIngredient = (
     ingredientId: string,
     changes: Partial<
-      Pick<RecipeIngredient, "quantity" | "unit" | "pricePerUnit">
+      Pick<RecipeIngredientPayload, "quantity" | "unit" | "pricePerUnit">
     >,
   ) => {
     setIngredients((prev) =>

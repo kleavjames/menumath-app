@@ -1,127 +1,210 @@
-import { router } from "expo-router";
+import type { IngredientCategory } from "@/app/(app)/(ingredients)";
+import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Pill, Text } from "@/components/atoms";
+import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
+import { Categories } from "@/components/organisms";
+import { CURRENCY_SYMBOLS } from "@/constants/units";
+import { formatPrice, toNumber } from "@/helpers/money";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  updateCategory,
+} from "@/service/api/categories";
+import { getRecipes } from "@/service/api/recipes";
+import { useAccountUserStore } from "@/store/accountUser";
+import { Category, CategoryType, Currency } from "@/types/business";
+import { ApiError } from "@/types/common";
+import { Recipe } from "@/types/recipe";
+
+const DEFAULT_TARGET_FOOD_COST = 30;
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
 
-const CATEGORIES = ["All", "Mains", "Sides", "Bakery", "Desserts"] as const;
-
-type Category = (typeof CATEGORIES)[number] | "Drinks";
+const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 
 type CostStatus = "good" | "warn" | "over";
 
-type Recipe = {
-  id: string;
-  name: string;
-  category: Exclude<Category, "All">;
-  yieldCount?: number;
-  priceEach: number;
-  costPerServing: number;
-  foodCostPercent: number;
-};
-
-const TARGET_FOOD_COST = 30;
-
-const RECIPES: Recipe[] = [
-  {
-    id: "1",
-    name: "Margherita pizza",
-    category: "Mains",
-    priceEach: 9,
-    costPerServing: 2.68,
-    foodCostPercent: 29.8,
-  },
-  {
-    id: "2",
-    name: "Caprese salad",
-    category: "Sides",
-    priceEach: 9.5,
-    costPerServing: 3.9,
-    foodCostPercent: 41.1,
-  },
-  {
-    id: "3",
-    name: "Butter croissant",
-    category: "Bakery",
-    yieldCount: 12,
-    priceEach: 4.5,
-    costPerServing: 0.79,
-    foodCostPercent: 17.5,
-  },
-  {
-    id: "4",
-    name: "Vanilla custard tart",
-    category: "Desserts",
-    yieldCount: 6,
-    priceEach: 4,
-    costPerServing: 1.23,
-    foodCostPercent: 30.7,
-  },
-  {
-    id: "5",
-    name: "Flat white",
-    category: "Drinks",
-    priceEach: 4.8,
-    costPerServing: 0.74,
-    foodCostPercent: 15.4,
-  },
-];
-
-const formatMoney = (value: number) =>
-  `$${value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const getCostStatus = (percent: number): CostStatus => {
-  if (percent <= TARGET_FOOD_COST) return "good";
-  if (percent <= TARGET_FOOD_COST + 5) return "warn";
+const getCostStatus = (percent: number, target: number): CostStatus => {
+  if (percent <= target) return "good";
+  if (percent <= target + 5) return "warn";
   return "over";
 };
 
-const buildRecipeMeta = (recipe: Recipe) => {
-  const parts: string[] = [recipe.category];
-  if (recipe.yieldCount) {
-    parts.push(`Yields ${recipe.yieldCount}`);
+const buildRecipeMeta = (recipe: Recipe, symbol: string) => {
+  const parts: string[] = [];
+  if (recipe.servings > 1) {
+    parts.push(`Yields ${recipe.servings}`);
   }
-  parts.push(`${formatMoney(recipe.priceEach)} each`);
+  parts.push(`${symbol}${formatPrice(recipe.pricePerServing)} each`);
   return parts.join(" · ");
 };
 
 export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
+
+  const businessId = useAccountUserStore((state) => state.businessId);
+  const currency = useAccountUserStore(
+    (state) => state.business?.currency ?? Currency.USD,
+  );
+  const targetFoodCost = useAccountUserStore((state) => {
+    const target = toNumber(state.business?.targetFoodCost ?? "");
+    return target > 0 ? target : DEFAULT_TARGET_FOOD_COST;
+  });
+  const symbol = CURRENCY_SYMBOLS[currency];
+
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("All");
+  const [categories, setCategories] = useState<IngredientCategory[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [category, setCategory] = useState(ALL_CATEGORY.name);
+
+  const initCategories = useCallback(async (bId: string) => {
+    try {
+      const result = await getCategories(bId, CategoryType.RECIPE);
+      setCategories(
+        result.map((item: Category) => ({ id: item.id, name: item.name })),
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  }, []);
+
+  const initRecipes = useCallback(async (bId: string) => {
+    try {
+      const result = await getRecipes(bId);
+      setRecipes(result);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.error(error.message);
+      } else {
+        console.error(error);
+      }
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!businessId) return;
+      void initCategories(businessId);
+      void initRecipes(businessId);
+    }, [businessId, initCategories, initRecipes]),
+  );
+
+  const selectedCategory = useMemo(
+    () =>
+      category === ALL_CATEGORY.name
+        ? ALL_CATEGORY
+        : (categories.find((item) => item.name === category) ?? ALL_CATEGORY),
+    [categories, category],
+  );
+
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((item) => [item.id, item.name])),
+    [categories],
+  );
 
   const filteredRecipes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return RECIPES.filter((recipe) => {
+    return recipes.filter((recipe) => {
+      const categoryName = categoryNameById.get(recipe.categoryId) ?? "";
       const matchesCategory =
-        category === "All" || recipe.category === category;
+        selectedCategory.id === ALL_CATEGORY.id ||
+        recipe.categoryId === selectedCategory.id;
       const matchesQuery =
         !normalizedQuery ||
         recipe.name.toLowerCase().includes(normalizedQuery) ||
-        recipe.category.toLowerCase().includes(normalizedQuery);
+        categoryName.toLowerCase().includes(normalizedQuery);
 
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [categoryNameById, recipes, query, selectedCategory]);
 
-  const avgFoodCost =
-    RECIPES.reduce((sum, recipe) => sum + recipe.foodCostPercent, 0) /
-    RECIPES.length;
-  const overTargetCount = RECIPES.filter(
-    (recipe) => recipe.foodCostPercent > TARGET_FOOD_COST,
-  ).length;
+  const { avgFoodCost, overTargetCount } = useMemo(() => {
+    if (recipes.length === 0) {
+      return { avgFoodCost: 0, overTargetCount: 0 };
+    }
+
+    const totalFoodCost = recipes.reduce(
+      (sum, recipe) => sum + recipe.recipeCost,
+      0,
+    );
+    return {
+      avgFoodCost: totalFoodCost / recipes.length,
+      overTargetCount: recipes.filter(
+        (recipe) => recipe.recipeCost > targetFoodCost,
+      ).length,
+    };
+  }, [recipes, targetFoodCost]);
+
+  const handleCreateCategory = async (name: string) => {
+    try {
+      const created = await createCategory({
+        name,
+        type: CategoryType.RECIPE,
+        businessId: businessId!,
+      });
+      setCategories((prev) => [
+        ...prev,
+        { id: created.id, name: created.name },
+      ]);
+      showToast("Category created successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+  };
+
+  const handleRenameCategory = async (from: string, to: string, id: string) => {
+    try {
+      await updateCategory(id, { name: to });
+      setCategories((prev) =>
+        prev.map((item) => (item.name === from ? { ...item, name: to } : item)),
+      );
+      if (category === from) {
+        setCategory(to);
+      }
+      showToast("Category renamed successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      showToast("Category deleted successfully", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+    setCategories((prev) => prev.filter((item) => item.id !== id));
+    if (selectedCategory.id === id) {
+      setCategory(ALL_CATEGORY.name);
+    }
+  };
 
   return (
     <View
@@ -129,14 +212,15 @@ export default function RecipesScreen() {
         styles.screen,
         {
           paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom,
         },
       ]}
     >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.content(insets.bottom + 16)}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={Keyboard.dismiss}
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -159,29 +243,28 @@ export default function RecipesScreen() {
               <Text style={styles.newButtonLabel}>New</Text>
             </Pressable>
           </View>
-          <Text color="textSecondary">
-            {RECIPES.length} recipes · avg food cost {avgFoodCost.toFixed(1)}% ·{" "}
+          <Text color="textSecondary" variant="label">
+            {recipes.length} recipes · avg food cost {avgFoodCost.toFixed(1)}% ·{" "}
             {overTargetCount} over target
           </Text>
         </View>
 
-        <SearchInput value={query} onChangeText={setQuery} />
+        <View style={styles.search}>
+          <SearchInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search recipes"
+          />
+        </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filters}
-        >
-          {CATEGORIES.map((item) => (
-            <Pill
-              key={item}
-              selected={category === item}
-              onPress={() => setCategory(item)}
-            >
-              {item}
-            </Pill>
-          ))}
-        </ScrollView>
+        <Categories
+          categories={categories}
+          selected={selectedCategory}
+          onSelect={setCategory}
+          onCreate={handleCreateCategory}
+          onRename={handleRenameCategory}
+          onDelete={handleDeleteCategory}
+        />
 
         <View style={styles.listSection}>
           <View style={styles.columnHeaders}>
@@ -204,11 +287,13 @@ export default function RecipesScreen() {
           <Card style={styles.listCard}>
             {filteredRecipes.length === 0 ? (
               <Text color="textSecondary" style={styles.empty}>
-                No recipes match your search.
+                {recipes.length === 0
+                  ? "No recipes yet."
+                  : "No recipes match your search."}
               </Text>
             ) : (
               filteredRecipes.map((recipe, index) => {
-                const status = getCostStatus(recipe.foodCostPercent);
+                const status = getCostStatus(recipe.recipeCost, targetFoodCost);
 
                 return (
                   <View key={recipe.id}>
@@ -225,13 +310,14 @@ export default function RecipesScreen() {
                     >
                       <View style={styles.rowLeft}>
                         <Text style={styles.recipeName}>{recipe.name}</Text>
-                        <Text variant="caption" color="textSecondary">
-                          {buildRecipeMeta(recipe)}
+                        <Text variant="label" color="textSecondary">
+                          {buildRecipeMeta(recipe, symbol)}
                         </Text>
                       </View>
                       <View style={styles.rowRight}>
                         <Text style={styles.cost}>
-                          {formatMoney(recipe.costPerServing)}
+                          {symbol}
+                          {formatPrice(recipe.costPerServing)}
                         </Text>
                         <View
                           style={[
@@ -249,7 +335,7 @@ export default function RecipesScreen() {
                               status === "over" && styles.badgeLabelOver,
                             ]}
                           >
-                            {recipe.foodCostPercent.toFixed(1)}%
+                            {recipe.recipeCost.toFixed(2)}%
                           </Text>
                         </View>
                       </View>
@@ -269,14 +355,17 @@ const styles = StyleSheet.create((theme) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.gap(3),
   },
-  content: {
+  content: (paddingBottom: number) => ({
     gap: theme.gap(2.5),
-    paddingBottom: theme.gap(4),
-  },
+    paddingBottom,
+  }),
   header: {
     gap: theme.gap(1),
+    paddingHorizontal: theme.gap(3),
+  },
+  search: {
+    paddingHorizontal: theme.gap(3),
   },
   headerTop: {
     flexDirection: "row",
@@ -305,13 +394,9 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.fontSize.sm,
     fontFamily: theme.fontFamily.semiBold,
   },
-  filters: {
-    flexDirection: "row",
-    gap: theme.gap(1),
-    paddingRight: theme.gap(1),
-  },
   listSection: {
     gap: theme.gap(1.5),
+    paddingHorizontal: theme.gap(3),
   },
   columnHeaders: {
     flexDirection: "row",
@@ -361,7 +446,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(0.75),
   },
   cost: {
-    fontSize: theme.fontSize.md,
+    fontSize: theme.fontSize.sm,
     fontFamily: theme.fontFamily.medium,
     color: theme.colors.text,
   },
