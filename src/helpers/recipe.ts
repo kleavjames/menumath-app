@@ -41,5 +41,7 @@ export const parseRecipe = (raw: Recipe): Recipe => {
     recipeCost,
     profit,
     margin,
+    steps: Array.isArray(raw.steps) ? raw.steps : [],
+    ingredients: Array.isArray(raw.ingredients) ? raw.ingredients : [],
   };
 };

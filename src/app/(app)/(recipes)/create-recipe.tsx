@@ -1,4 +1,4 @@
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -21,7 +21,7 @@ import {
 import { CURRENCY_SYMBOLS } from "@/constants/units";
 import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers/money";
 import { getCategories } from "@/service/api/categories";
-import { createRecipe } from "@/service/api/recipes";
+import { createRecipe, getRecipe, updateRecipe } from "@/service/api/recipes";
 import { useAccountUserStore } from "@/store/accountUser";
 import { CategoryType, Currency } from "@/types/business";
 import { ApiError } from "@/types/common";
@@ -54,6 +54,9 @@ const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
 
 export default function CreateRecipeScreen() {
   const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const recipeId = typeof id === "string" ? id : undefined;
+  const isEditing = Boolean(recipeId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
@@ -87,6 +90,38 @@ export default function CreateRecipeScreen() {
       )
       .catch((error) => console.error(error));
   }, [businessId]);
+
+  useEffect(() => {
+    if (!recipeId) return;
+
+    getRecipe(recipeId)
+      .then((recipe) => {
+        setName(recipe.name);
+        setCategoryId(recipe.categoryId);
+        setServings(recipe.servings);
+        setPrice(recipe.pricePerServing);
+        setIngredients(
+          recipe.ingredients.map((line) => ({
+            ingredientId: line.ingredientId,
+            quantity: String(line.quantity),
+            unit: line.unit,
+            pricePerUnit: toNumber(line.pricePerUnit),
+          })),
+        );
+        setMethodSteps(
+          [...recipe.steps]
+            .sort((a, b) => a.order - b.order)
+            .map((step, index) => ({ id: index + 1, text: step.text })),
+        );
+      })
+      .catch((error) => {
+        if (error instanceof ApiError) {
+          showToast(error.message, { variant: "error" });
+        } else {
+          showToast("Could not load recipe", { variant: "error" });
+        }
+      });
+  }, [recipeId]);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -161,8 +196,7 @@ export default function CreateRecipeScreen() {
     const steps = toRecipeStepsPayload(methodSteps);
 
     try {
-      await createRecipe({
-        businessId: businessId!,
+      const payload = {
         categoryId: categoryId!,
         name,
         servings,
@@ -173,8 +207,18 @@ export default function CreateRecipeScreen() {
         margin: marginProfit,
         ingredients,
         steps,
-      });
-      showToast("Recipe created successfully", { variant: "default" });
+      };
+
+      if (recipeId) {
+        await updateRecipe(recipeId, payload);
+        showToast("Recipe updated successfully", { variant: "default" });
+      } else {
+        await createRecipe({
+          businessId: businessId!,
+          ...payload,
+        });
+        showToast("Recipe created successfully", { variant: "default" });
+      }
       router.push("/(app)/(recipes)");
     } catch (error) {
       if (error instanceof ApiError) {
@@ -190,7 +234,7 @@ export default function CreateRecipeScreen() {
       <Stack.Screen
         options={{
           headerTransparent: true,
-          title: "New recipe",
+          title: isEditing ? "Edit recipe" : "New recipe",
           headerLeft: () => (
             <Pressable onPressIn={router.back} style={styles.headerButton}>
               <Text style={styles.cancelButtonText}>Cancel</Text>

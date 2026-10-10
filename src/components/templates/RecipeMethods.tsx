@@ -1,5 +1,4 @@
 import { SymbolView } from "expo-symbols";
-import { useRef } from "react";
 import { Pressable, TextInput as RNTextInput, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -32,10 +31,9 @@ const UniTextInput = withUnistyles(RNTextInput, (theme) => ({
 }));
 
 export const RecipeMethods = ({ steps, onChange }: RecipeMethodsProps) => {
-  const nextStepId = useRef(1);
-
   const addStep = () => {
-    onChange([...steps, { id: nextStepId.current++, text: "" }]);
+    const nextId = steps.reduce((max, step) => Math.max(max, step.id), 0) + 1;
+    onChange([...steps, { id: nextId, text: "" }]);
   };
 
   const updateStep = (stepId: number, text: string) => {

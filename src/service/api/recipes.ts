@@ -32,6 +32,46 @@ export const createRecipe = async (payload: CreateRecipePayload) => {
   return parseRecipe(response.data as Recipe);
 };
 
+export type UpdateRecipePayload = Partial<
+  Omit<CreateRecipePayload, "businessId">
+>;
+
+export const getRecipe = async (id: string) => {
+  const response = await client.get<Recipe | ApiErrorPayload>(`/recipes/${id}`);
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return parseRecipe(response.data as Recipe);
+};
+
+export const updateRecipe = async (id: string, payload: UpdateRecipePayload) => {
+  const response = await client.patch<Recipe | ApiErrorPayload>(
+    `/recipes/${id}`,
+    payload,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return parseRecipe(response.data as Recipe);
+};
+
+export const deleteRecipe = async (id: string) => {
+  const response = await client.delete<Recipe | ApiErrorPayload>(
+    `/recipes/${id}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+};
+
 export const getRecipes = async (businessId: string) => {
   const response = await client.get<Recipe[] | ApiErrorPayload>(
     `/recipes?businessId=${businessId}`,
