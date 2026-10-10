@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -12,6 +12,7 @@ import { useAuth } from "@/provider/AuthProvider";
 import { signOut } from "@/service/api/auth";
 import { useAccountUserStore } from "@/store/accountUser";
 import { ApiError } from "@/types/common";
+import { MembershipRole } from "@/types/user";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
@@ -22,6 +23,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const business = useAccountUserStore((state) => state.business);
+  const teamMembers = useAccountUserStore((state) => state.teamMembers);
+
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
@@ -49,6 +52,13 @@ export default function SettingsScreen() {
       { text: "Sign out", onPress: onSignOut },
     ]);
   };
+
+  const teamMemberText = useMemo(() => {
+    const membersOnly = teamMembers.filter(
+      (member) => member.role !== MembershipRole.OWNER,
+    );
+    return (membersOnly?.length ?? 0) + " members";
+  }, [teamMembers]);
 
   return (
     <View
@@ -115,7 +125,7 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <AccountsRow
               label="Team"
-              value="3 members"
+              value={teamMemberText}
               onPress={() => router.push("/teams")}
             />
           </Card>

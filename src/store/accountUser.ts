@@ -7,6 +7,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 interface UserBusinessState {
   user: User | null;
   membership: Membership | null;
+  teamMembers: Membership[];
   business: Business | null;
   businessId: string | null;
 }
@@ -18,6 +19,7 @@ interface AccountUserState extends UserBusinessState {
 
 const initialState: UserBusinessState = {
   user: null,
+  teamMembers: [],
   membership: null,
   business: null,
   businessId: null,
@@ -35,6 +37,7 @@ export const useAccountUserStore = create<AccountUserState>()(
         set({
           user,
           membership,
+          teamMembers: memberships,
           business,
           businessId: business.id,
         });

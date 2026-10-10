@@ -1,6 +1,7 @@
 import { Currency } from "@/types/business";
 
 import { BusinessType } from "@/types/business";
+import { MembershipRole } from "@/types/user";
 
 export const BUSINESS_TYPE_OPTIONS = [
   { label: "Cafe", value: BusinessType.CAFE },
@@ -23,4 +24,9 @@ export const CURRENCY_OPTIONS = [
   { label: "NZD — New Zealand Dollar", value: Currency.NZD },
   { label: "SGD — Singapore Dollar", value: Currency.SGD },
   { label: "JPY — Japanese Yen", value: Currency.JPY },
+];
+
+export const INVITE_CODE_ROLE_OPTIONS = [
+  { label: "Joins as Manager", value: MembershipRole.MANAGER },
+  { label: "Joins as Staff", value: MembershipRole.STAFF },
 ];

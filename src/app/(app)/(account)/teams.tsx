@@ -1,9 +1,10 @@
 import * as Clipboard from "expo-clipboard";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   View,
 } from "react-native";
@@ -13,30 +14,13 @@ import { StyleSheet } from "react-native-unistyles";
 import {
   Button,
   Card,
-  Input,
   showToast,
   Text,
   ToggleButton,
 } from "@/components/atoms";
+import { INVITE_CODE_ROLE_OPTIONS } from "@/constants/business";
 import { useAccountUserStore } from "@/store/accountUser";
-
-const INVITE_CODE_ROLE_OPTIONS = [
-  { label: "Joins as Manager", value: "manager" },
-  { label: "Joins as Staff", value: "staff" },
-];
-
-const EMAIL_ROLE_OPTIONS = [
-  { label: "Manager", value: "manager" },
-  { label: "Staff", value: "staff" },
-];
-
-type InviteRole = "manager" | "staff";
-
-const ROLE_DESCRIPTIONS: Record<InviteRole, string> = {
-  manager: "Managers can edit recipes, costs, and manage team access.",
-  staff:
-    "Staff can view recipes and ingredient lists, but not costs or prices.",
-};
+import { MembershipRole } from "@/types/user";
 
 const generateInviteCode = () =>
   Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join("");
@@ -61,10 +45,9 @@ export default function TeamsScreen() {
   const businessName = business?.name ?? "your business";
 
   const [inviteCode, setInviteCode] = useState("482913");
-  const [codeRole, setCodeRole] = useState<InviteRole>("staff");
-  const [email, setEmail] = useState("");
-  const [emailRole, setEmailRole] = useState<InviteRole>("staff");
-  const [emailError, setEmailError] = useState<string | null>(null);
+  const [codeRole, setCodeRole] = useState<MembershipRole>(
+    MembershipRole.STAFF,
+  );
 
   const codeHelpText = useMemo(
     () =>
@@ -82,28 +65,17 @@ export default function TeamsScreen() {
     showToast("New invite code generated", { variant: "default" });
   };
 
-  const handleInvite = () => {
-    const trimmed = email.trim();
-    if (!trimmed) {
-      setEmailError("Email is required");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setEmailError("Enter a valid email");
-      return;
-    }
-
-    setEmail("");
-    setEmailError(null);
-    showToast(`Invite sent to ${trimmed}`, { variant: "default" });
-  };
-
   return (
     <>
       <Stack.Screen
         options={{
           headerTransparent: true,
           title: "Team",
+          headerLeft: () => (
+            <Pressable onPressIn={router.back} style={styles.headerButton}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+          ),
         }}
       />
       <View
@@ -134,68 +106,29 @@ export default function TeamsScreen() {
               <ToggleButton
                 options={INVITE_CODE_ROLE_OPTIONS}
                 value={codeRole}
-                onChange={(value) => setCodeRole(value as InviteRole)}
+                onChange={(value) => setCodeRole(value as MembershipRole)}
               />
 
               <View style={styles.buttonRow}>
                 <Button
                   variant="outline"
                   style={styles.halfButton}
+                  textStyle={styles.buttonText}
                   onPress={handleCopyCode}
                 >
                   Copy code
                 </Button>
-                <Button style={styles.halfButton} onPress={handleGenerateCode}>
+                <Button
+                  style={styles.halfButton}
+                  textStyle={styles.buttonText}
+                  onPress={handleGenerateCode}
+                >
                   Generate new
                 </Button>
               </View>
 
               <Text variant="caption" color="textSecondary">
                 {codeHelpText}
-              </Text>
-            </Card>
-
-            <Card>
-              <Text style={styles.cardTitle}>Invite by email</Text>
-
-              <View style={styles.field}>
-                <Input
-                  value={email}
-                  onChangeText={(value) => {
-                    setEmail(value);
-                    if (emailError) setEmailError(null);
-                  }}
-                  placeholder="name@email.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  state={emailError ? "error" : undefined}
-                  returnKeyType="send"
-                  onSubmitEditing={handleInvite}
-                />
-                {emailError ? (
-                  <Text variant="caption" color="error">
-                    {emailError}
-                  </Text>
-                ) : null}
-              </View>
-
-              <View style={styles.inviteRow}>
-                <ToggleButton
-                  options={EMAIL_ROLE_OPTIONS}
-                  value={emailRole}
-                  onChange={(value) => setEmailRole(value as InviteRole)}
-                  style={styles.emailRoleToggle}
-                />
-                <Button style={styles.inviteButton} onPress={handleInvite}>
-                  Invite
-                </Button>
-              </View>
-
-              <Text variant="caption" color="textSecondary">
-                {ROLE_DESCRIPTIONS[emailRole]}
               </Text>
             </Card>
           </ScrollView>
@@ -228,6 +161,10 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.fontFamily.semiBold,
     fontSize: theme.fontSize.md,
   },
+  buttonText: {
+    fontFamily: theme.fontFamily.semiBold,
+    fontSize: theme.fontSize.xs,
+  },
   codeRow: {
     flexDirection: "row",
     gap: theme.gap(1),
@@ -254,20 +191,11 @@ const styles = StyleSheet.create((theme) => ({
   halfButton: {
     flex: 1,
   },
-  field: {
-    gap: theme.gap(1),
+  headerButton: {
+    paddingHorizontal: theme.gap(2),
+    paddingVertical: theme.gap(1),
   },
-  inviteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.gap(1.5),
-  },
-  emailRoleToggle: {
-    flex: 1,
-  },
-  inviteButton: {
-    flexShrink: 0,
-    alignSelf: "auto",
-    paddingHorizontal: theme.gap(2.5),
+  cancelButtonText: {
+    color: theme.colors.text,
   },
 }));
