@@ -104,12 +104,15 @@ export const ButtonGroupView = ({
 const styles = StyleSheet.create((theme) => ({
   container: {
     flex: 1,
+    minHeight: 0,
     gap: theme.gap(2),
   },
   pager: {
     flex: 1,
+    minHeight: 0,
   },
   page: {
     flex: 1,
+    minHeight: 0,
   },
 }));

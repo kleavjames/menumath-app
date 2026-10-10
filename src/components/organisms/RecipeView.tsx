@@ -2,11 +2,12 @@ import {
   BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
+  BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useMemo, type Ref } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -53,7 +54,6 @@ type RecipeViewProps = {
 export const RecipeView = ({
   ref,
   recipe,
-  categoryName,
   symbol,
   targetFoodCost,
   onEdit,
@@ -61,8 +61,13 @@ export const RecipeView = ({
   onDismiss,
 }: RecipeViewProps) => {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
-  const snapPoints = useMemo(() => ["90%"], []);
+  const sheetHeight = useMemo(
+    () => Math.round(windowHeight * 0.9),
+    [windowHeight],
+  );
+  const snapPoints = useMemo(() => [sheetHeight], [sheetHeight]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -86,13 +91,14 @@ export const RecipeView = ({
     <BottomSheetModal
       ref={ref}
       index={0}
+      enableDynamicSizing={false}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       snapPoints={snapPoints}
       onDismiss={onDismiss}
     >
       {recipe ? (
-        <View style={styles.sheetBody}>
+        <BottomSheetView style={[styles.sheetBody, { height: sheetHeight }]}>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text variant="title" numberOfLines={2}>
@@ -258,7 +264,7 @@ export const RecipeView = ({
               </View>
             </BottomSheetScrollView>
           </ButtonGroupView>
-        </View>
+        </BottomSheetView>
       ) : null}
     </BottomSheetModal>
   );
@@ -273,6 +279,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   tabs: {
     flex: 1,
+    minHeight: 0,
   },
   tabContent: {
     gap: theme.gap(2),

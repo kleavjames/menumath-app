@@ -2,7 +2,7 @@ import type { IngredientCategory } from "@/app/(app)/(ingredients)";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -68,6 +68,7 @@ export default function RecipesScreen() {
   const [category, setCategory] = useState(ALL_CATEGORY.name);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const recipeSheetRef = useRef<BottomSheetModal>(null);
+  const shouldPresentRecipeSheetRef = useRef(false);
 
   const initCategories = useCallback(async (bId: string) => {
     try {
@@ -154,9 +155,19 @@ export default function RecipesScreen() {
 
   const handleOpenRecipe = (recipe: Recipe) => {
     Keyboard.dismiss();
+    shouldPresentRecipeSheetRef.current = true;
     setSelectedRecipe(recipe);
-    recipeSheetRef.current?.present();
   };
+
+  useEffect(() => {
+    if (!selectedRecipe || !shouldPresentRecipeSheetRef.current) return;
+    shouldPresentRecipeSheetRef.current = false;
+    recipeSheetRef.current?.present();
+  }, [selectedRecipe]);
+
+  const handleDismissRecipeSheet = useCallback(() => {
+    setSelectedRecipe(null);
+  }, []);
 
   const handleEditRecipe = (recipe: Recipe) => {
     recipeSheetRef.current?.dismiss();
@@ -178,7 +189,9 @@ export default function RecipesScreen() {
           onPress: async () => {
             try {
               await deleteRecipe(recipe.id);
-              setRecipes((prev) => prev.filter((item) => item.id !== recipe.id));
+              setRecipes((prev) =>
+                prev.filter((item) => item.id !== recipe.id),
+              );
               recipeSheetRef.current?.dismiss();
               showToast("Recipe deleted successfully", { variant: "default" });
             } catch (error) {
@@ -394,15 +407,11 @@ export default function RecipesScreen() {
       <RecipeView
         ref={recipeSheetRef}
         recipe={selectedRecipe}
-        categoryName={
-          selectedRecipe
-            ? categoryNameById.get(selectedRecipe.categoryId)
-            : undefined
-        }
         symbol={symbol}
         targetFoodCost={targetFoodCost}
         onEdit={handleEditRecipe}
         onDelete={handleDeleteRecipe}
+        onDismiss={handleDismissRecipeSheet}
       />
     </View>
   );
