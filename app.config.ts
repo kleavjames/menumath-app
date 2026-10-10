@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: "menumath",
     version: appVersion,
     orientation: "portrait",
-    icon: "./assets/images/menumath-1024.png",
+    icon: "./assets/images/menumath-icon-1024.png",
     scheme: "menumathapp",
     userInterfaceStyle: "automatic",
     ios: {
