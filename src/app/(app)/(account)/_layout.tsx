@@ -6,6 +6,7 @@ export default function AccountLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="profile" />
       <Stack.Screen name="business" />
+      <Stack.Screen name="teams" />
     </Stack>
   );
 }

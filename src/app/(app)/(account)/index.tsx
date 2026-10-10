@@ -116,9 +116,7 @@ export default function SettingsScreen() {
             <AccountsRow
               label="Team"
               value="3 members"
-              onPress={() => {
-                // TODO: open team
-              }}
+              onPress={() => router.push("/teams")}
             />
           </Card>
         </View>
