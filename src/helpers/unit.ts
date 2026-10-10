@@ -6,7 +6,8 @@ import { formatAmount, formatPrice, toNumber } from "./money";
 export const unitLabel = (unit: MetricUnit | string) =>
   UNIT_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
 
-const costUnitLabel = (unit: MetricUnit) => {
+/** Unit that `usableCostPerItem` is expressed in, e.g. kg -> g. */
+export const costUnitLabel = (unit: MetricUnit) => {
   const option = UNIT_OPTIONS.find((item) => item.value === unit);
   if (option?.subUnit) return unitLabel(option.subUnit.label);
   return option?.label ?? unit;

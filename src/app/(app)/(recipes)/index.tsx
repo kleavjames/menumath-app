@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -149,9 +150,7 @@ export default function RecipesScreen() {
                 styles.newButton,
                 pressed && styles.newButtonPressed,
               ]}
-              onPress={() => {
-                // TODO: create recipe
-              }}
+              onPress={() => router.push("/create-recipe")}
             >
               <UniSymbol
                 name={{ ios: "plus", android: "add", web: "add" }}

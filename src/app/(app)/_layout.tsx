@@ -11,7 +11,7 @@ export default function AppLayout() {
 
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="(recipes)">
         <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
       </NativeTabs.Trigger>

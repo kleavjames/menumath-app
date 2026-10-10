@@ -73,7 +73,7 @@ const SignIn = () => {
       login(response.accessToken);
       setAccountUser(response.user);
       showToast("Signed in successfully", { variant: "default" });
-      router.replace("/(app)");
+      router.replace("/(app)/(recipes)");
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);
