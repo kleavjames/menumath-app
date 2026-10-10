@@ -1,7 +1,7 @@
 import { parseRecipe } from "@/helpers/recipe";
 import { ApiError, ApiErrorPayload } from "@/types/common";
 import { RecipeIngredientPayload } from "@/types/ingredient";
-import { Recipe, RecipeStepPayload } from "@/types/recipe";
+import { Recipe, RecipeStep } from "@/types/recipe";
 import client from "./client";
 
 export interface CreateRecipePayload {
@@ -15,7 +15,7 @@ export interface CreateRecipePayload {
   profit: number;
   margin: number;
   ingredients: RecipeIngredientPayload[];
-  steps: RecipeStepPayload[];
+  steps: RecipeStep[];
 }
 
 export const createRecipe = async (payload: CreateRecipePayload) => {

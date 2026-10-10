@@ -14,7 +14,6 @@ const parseApiNumber = (value: unknown): number => {
   return 0;
 };
 
-/** Normalizes API decimals (strings) and fills food cost % when absent. */
 export const parseRecipe = (raw: Recipe): Recipe => {
   const pricePerServing = parseApiNumber(raw.pricePerServing);
   const costPerServing = parseApiNumber(raw.costPerServing);

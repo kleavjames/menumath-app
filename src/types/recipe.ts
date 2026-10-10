@@ -12,6 +12,7 @@ export interface Recipe {
   recipeCost: number;
   profit: number;
   margin: number;
+  steps: RecipeStep[];
   createdAt: string;
   updatedAt: string;
   ingredients: RecipeIngredient[];
@@ -28,7 +29,7 @@ export interface RecipeIngredient {
 }
 
 /** Method step sent when creating or updating a recipe. */
-export interface RecipeStepPayload {
+export interface RecipeStep {
   order: number;
   text: string;
 }

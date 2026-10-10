@@ -26,7 +26,7 @@ import { useAccountUserStore } from "@/store/accountUser";
 import { CategoryType, Currency } from "@/types/business";
 import { ApiError } from "@/types/common";
 import { RecipeIngredientPayload } from "@/types/ingredient";
-import { RecipeStepPayload } from "@/types/recipe";
+import { RecipeStep } from "@/types/recipe";
 
 const DEFAULT_TARGET_FOOD_COST = 30;
 
@@ -44,7 +44,7 @@ const getCostStatus = (percent: number, target: number): CostStatus => {
   return "over";
 };
 
-const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStepPayload[] =>
+const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
   steps
     .map((step, index) => ({
       order: index + 1,
