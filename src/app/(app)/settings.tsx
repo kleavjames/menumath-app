@@ -6,10 +6,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, StepperInput, Text } from "@/components/atoms";
-import { useAuth } from "../../../provider/AuthProvider";
-import { signOut } from "../../../service/api/auth";
-import { useAccountUserStore } from "../../../store/accountUser";
-import { ApiError } from "../../../types/common";
+import { useAuth } from "@/provider/AuthProvider";
+import { signOut } from "@/service/api/auth";
+import { useAccountUserStore } from "@/store/accountUser";
+import { ApiError } from "@/types/common";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,

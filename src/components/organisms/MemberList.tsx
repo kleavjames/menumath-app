@@ -1,7 +1,7 @@
+import { Invite } from "@/app/invite-members";
 import { SymbolView } from "expo-symbols";
 import { Pressable, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
-import { Invite } from "../../app/invite-members";
 import { Text } from "../atoms";
 
 type Member = {

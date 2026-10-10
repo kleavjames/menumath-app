@@ -19,19 +19,12 @@ import {
 import { BigInfoCard } from "@/components/templates/BigInfoCard";
 
 import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
-import { getCategories } from "../../../../service/api/categories";
-import {
-  createIngredient,
-  updateIngredient,
-} from "../../../../service/api/ingredients";
-import {
-  formatAmount,
-  formatPrice,
-  toNumber,
-} from "../../../../service/helpers/money";
-import { useAccountUserStore } from "../../../../store/accountUser";
-import { CategoryType, Currency, MetricUnit } from "../../../../types/business";
-import { ApiError } from "../../../../types/common";
+import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
+import { getCategories } from "@/service/api/categories";
+import { createIngredient, updateIngredient } from "@/service/api/ingredients";
+import { useAccountUserStore } from "@/store/accountUser";
+import { CategoryType, Currency, MetricUnit } from "@/types/business";
+import { ApiError } from "@/types/common";
 
 type FieldErrors = {
   name?: string;

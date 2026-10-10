@@ -13,13 +13,9 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, Text } from "@/components/atoms";
 import { BigInfoCard } from "@/components/templates/BigInfoCard";
 import { UNIT_OPTIONS } from "@/constants/units";
-import {
-  formatAmount,
-  formatPrice,
-  toNumber,
-} from "../../../service/helpers/money";
-import { formatPackSize, unitLabel } from "../../../service/helpers/unit";
-import { Ingredient } from "../../../types/ingredient";
+import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
+import { formatPackSize, unitLabel } from "@/helpers/unit";
+import { Ingredient } from "@/types/ingredient";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.text,

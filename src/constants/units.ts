@@ -1,4 +1,4 @@
-import { Currency, MetricUnit, UnitOption } from "../../types/business";
+import { Currency, MetricUnit, UnitOption } from "@/types/business";
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   [Currency.USD]: "$",

@@ -1,6 +1,6 @@
+import { useAuth } from "@/provider/AuthProvider";
 import { Redirect } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { useAuth } from "../../../provider/AuthProvider";
 
 export default function AppLayout() {
   const { token } = useAuth();

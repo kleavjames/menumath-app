@@ -12,10 +12,10 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Loader, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
-import { useAuth } from "../../provider/AuthProvider";
-import { signIn } from "../../service/api/auth";
-import { useAccountUserStore } from "../../store/accountUser";
-import { ApiError } from "../../types/common";
+import { useAuth } from "@/provider/AuthProvider";
+import { signIn } from "@/service/api/auth";
+import { useAccountUserStore } from "@/store/accountUser";
+import { ApiError } from "@/types/common";
 
 type FieldErrors = {
   username?: string;
