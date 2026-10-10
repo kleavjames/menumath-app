@@ -7,6 +7,7 @@ const TAB_BAR_HIDDEN_SEGMENTS = new Set([
   "create-recipe",
   "create-ingredient",
   "profile",
+  "business",
 ]);
 
 export default function AppLayout() {

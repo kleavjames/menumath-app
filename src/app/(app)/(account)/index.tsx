@@ -21,6 +21,7 @@ export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
 
+  const business = useAccountUserStore((state) => state.business);
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
@@ -108,10 +109,8 @@ export default function SettingsScreen() {
           <Card style={styles.listCard}>
             <AccountsRow
               label="Business"
-              value="Lark & Crumb"
-              onPress={() => {
-                // TODO: edit business
-              }}
+              value={business?.name ?? "No business"}
+              onPress={() => router.push("/business")}
             />
             <View style={styles.divider} />
             <AccountsRow
