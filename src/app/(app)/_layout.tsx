@@ -1,10 +1,12 @@
 import { useAuth } from "@/provider/AuthProvider";
 import { Redirect, useSegments } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useUnistyles } from "react-native-unistyles";
 
 const TAB_BAR_HIDDEN_SEGMENTS = new Set(["create-recipe", "create-ingredient"]);
 
 export default function AppLayout() {
+  const { theme } = useUnistyles();
   const { token } = useAuth();
   const segments = useSegments();
   const hideTabBar = segments.some((segment) =>
@@ -16,7 +18,7 @@ export default function AppLayout() {
   }
 
   return (
-    <NativeTabs hidden={hideTabBar}>
+    <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
       <NativeTabs.Trigger name="(ingredients)">
         <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />

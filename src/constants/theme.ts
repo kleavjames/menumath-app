@@ -39,7 +39,7 @@ const borderRadius = {
 
 const lightTheme = {
   colors: {
-    primary: "#208AEF",
+    primary: "#5AC38F",
     secondary: "#E89B2D",
     text: "#17160F",
     textSecondary: "#5E5C54",
@@ -56,7 +56,7 @@ const lightTheme = {
 
 const darkTheme = {
   colors: {
-    primary: "#4BA3F5",
+    primary: "#5AC38F",
     secondary: "#F0B14A",
     text: "#17160F",
     textSecondary: "#5E5C54",

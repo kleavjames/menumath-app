@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, StepperInput, Text } from "@/components/atoms";
+import { BuildVersion } from "@/components/molecules";
 import { useAuth } from "@/provider/AuthProvider";
 import { signOut } from "@/service/api/auth";
 import { useAccountUserStore } from "@/store/accountUser";
@@ -238,9 +239,7 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        <Text variant="caption" color="textSecondary" style={styles.version}>
-          MenuMath 1.0.0
-        </Text>
+        <BuildVersion />
       </ScrollView>
     </View>
   );
