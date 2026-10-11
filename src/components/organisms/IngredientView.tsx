@@ -12,7 +12,7 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
 import { BigInfoCard } from "@/components/templates/BigInfoCard";
-import { UNIT_OPTIONS } from "@/constants/units";
+import { METRIC_OPTIONS } from "@/constants/units";
 import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
 import { formatPackSize, unitLabel } from "@/helpers/unit";
 import { Ingredient } from "@/types/ingredient";
@@ -87,7 +87,7 @@ export const IngredientView = ({
   // `usableCostPerItem` is stored per sub unit (e.g. g) when the unit has one,
   // otherwise per unit — mirror the breakdown shown on the create screen.
   const renderCost = (item: Ingredient) => {
-    const option = UNIT_OPTIONS.find((o) => o.value === item.itemSizeUnit);
+    const option = METRIC_OPTIONS.find((o) => o.value === item.itemSizeUnit);
     const stored = toNumber(item.usableCostPerItem);
     const subUnit = option?.subUnit;
 

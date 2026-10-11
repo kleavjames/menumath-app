@@ -1,17 +1,12 @@
 import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, InputWithPrefix, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 
-import { UNIT_OPTIONS } from "@/constants/units";
+import { METRIC_OPTIONS } from "@/constants/units";
 import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
 import { costUnitLabel, unitLabel } from "@/helpers/unit";
 import { getIngredients } from "@/service/api/ingredients";
@@ -28,7 +23,7 @@ const UniSymbolMuted = withUnistyles(SymbolView, (theme) => ({
 
 /** Unit that `usableCostPerItem` is priced in (e.g. kg → g, L → mL). */
 const getIngredientUseUnit = (ingredient: Ingredient): MetricUnit => {
-  const option = UNIT_OPTIONS.find(
+  const option = METRIC_OPTIONS.find(
     (item) => item.value === ingredient.itemSizeUnit,
   );
   return (
@@ -192,9 +187,7 @@ export const RecipeIngredient = ({
                       accessibilityRole="button"
                       accessibilityLabel={`Remove ${ingredient.name}`}
                       hitSlop={8}
-                      onPress={() =>
-                        removeRecipeIngredient(line.ingredientId)
-                      }
+                      onPress={() => removeRecipeIngredient(line.ingredientId)}
                     >
                       <UniSymbolMuted
                         name={{
@@ -220,10 +213,7 @@ export const RecipeIngredient = ({
 
         <Pressable
           accessibilityRole="button"
-          style={({ pressed }) => [
-            styles.addButton,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
           onPress={() => setIsPickerOpen(true)}
         >
           <UniSymbol
@@ -337,8 +327,7 @@ const IngredientPicker = ({
                         {symbol}
                         {formatAmount(
                           toNumber(ingredient.usableCostPerItem),
-                        )}{" "}
-                        / {costUnitLabel(ingredient.itemSizeUnit)}
+                        )} / {costUnitLabel(ingredient.itemSizeUnit)}
                       </Text>
                     </View>
                     <UniSymbol

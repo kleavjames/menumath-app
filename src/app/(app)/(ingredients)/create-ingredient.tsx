@@ -18,7 +18,7 @@ import {
 } from "@/components/molecules";
 import { BigInfoCard } from "@/components/templates/BigInfoCard";
 
-import { CURRENCY_SYMBOLS, UNIT_OPTIONS } from "@/constants/units";
+import { CURRENCY_SYMBOLS, METRIC_OPTIONS } from "@/constants/units";
 import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
 import { getCategories } from "@/service/api/categories";
 import { createIngredient, updateIngredient } from "@/service/api/ingredients";
@@ -98,7 +98,7 @@ export default function CreateIngredientScreen() {
     });
   };
 
-  const unitOption = UNIT_OPTIONS.find((option) => option.value === unit);
+  const unitOption = METRIC_OPTIONS.find((option) => option.value === unit);
 
   const usableCost = useMemo(() => {
     const size = toNumber(packSize);
@@ -260,7 +260,7 @@ export default function CreateIngredientScreen() {
                       setPackSize(value);
                       clearError("packSize");
                     }}
-                    options={UNIT_OPTIONS}
+                    options={METRIC_OPTIONS}
                     selected={unit}
                     onSelect={(value) => setUnit(value as MetricUnit)}
                     selectPlaceholder="Unit"

@@ -17,6 +17,7 @@ type ButtonGroupViewProps = {
   onChange?: (value: string) => void;
   scrollEnabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  groupButtonStyle?: StyleProp<ViewStyle>;
 };
 
 const getTabIndex = (tabs: ButtonGroupTab[], value?: string) => {
@@ -32,6 +33,7 @@ export const ButtonGroupView = ({
   defaultValue,
   onChange,
   scrollEnabled = true,
+  groupButtonStyle,
   style,
 }: ButtonGroupViewProps) => {
   const pagerRef = useRef<PagerView>(null);
@@ -78,6 +80,7 @@ export const ButtonGroupView = ({
         options={tabs}
         value={tabs[selectedIndex]?.value ?? tabs[0].value}
         onChange={handleTabChange}
+        style={groupButtonStyle}
       />
 
       <PagerView

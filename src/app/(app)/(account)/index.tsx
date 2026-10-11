@@ -156,9 +156,7 @@ export default function SettingsScreen() {
             <AccountsRow
               label="Units"
               value={formatCapitalized(business?.unitSystem ?? UnitSystem.BOTH)}
-              onPress={() => {
-                // TODO: change units
-              }}
+              onPress={() => router.push("/unitSystem")}
             />
             <View style={styles.divider} />
             <AccountsRow

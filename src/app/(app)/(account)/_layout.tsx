@@ -8,6 +8,7 @@ export default function AccountLayout() {
       <Stack.Screen name="business" />
       <Stack.Screen name="teams" />
       <Stack.Screen name="currency" />
+      <Stack.Screen name="unitSystem" />
     </Stack>
   );
 }
