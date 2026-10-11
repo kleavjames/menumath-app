@@ -7,6 +7,7 @@ interface InvitationCodeState {
   expiresAt: Date | null;
   setInvitationCode: (invitationCode: string) => void;
   setExpiresAt: (expiresAt: Date) => void;
+  clearInvitationCode: () => void;
 }
 
 export const useInvitationCodeStore = create<InvitationCodeState>()(
@@ -16,6 +17,7 @@ export const useInvitationCodeStore = create<InvitationCodeState>()(
       expiresAt: null,
       setInvitationCode: (invitationCode) => set({ invitationCode }),
       setExpiresAt: (expiresAt) => set({ expiresAt }),
+      clearInvitationCode: () => set({ invitationCode: "", expiresAt: null }),
     }),
     {
       name: "invitation-code-storage",

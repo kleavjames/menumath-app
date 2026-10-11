@@ -12,7 +12,7 @@ import { formatCapitalized, getInitials } from "@/helpers";
 import { useRole, useTeamMembers } from "@/hooks";
 import { useAuth } from "@/provider/AuthProvider";
 import { signOut } from "@/service/api";
-import { useAccountUserStore } from "@/store";
+import { useAccountUserStore, useInvitationCodeStore } from "@/store";
 import { ApiError, Currency, UnitSystem } from "@/types";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
@@ -31,6 +31,9 @@ export default function SettingsScreen() {
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
+  const clearInvitationCode = useInvitationCodeStore(
+    (state) => state.clearInvitationCode,
+  );
 
   const [targetFoodCost, setTargetFoodCost] = useState(
     Number(business?.targetFoodCost ?? 40),
@@ -40,6 +43,7 @@ export default function SettingsScreen() {
     try {
       await signOut();
       clearAccountUser();
+      clearInvitationCode();
       logout();
       router.replace("/signin");
     } catch (error) {
