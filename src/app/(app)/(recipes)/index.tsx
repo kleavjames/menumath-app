@@ -12,6 +12,7 @@ import { SearchInput } from "@/components/molecules";
 import { Categories, RecipeView } from "@/components/organisms";
 import { CURRENCY_SYMBOLS } from "@/constants";
 import { formatPrice, toNumber } from "@/helpers";
+import { useRole } from "@/hooks";
 import {
   createCategory,
   deleteCategory,
@@ -50,6 +51,7 @@ const buildRecipeMeta = (recipe: Recipe, symbol: string) => {
 
 export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
+  const { canInteract } = useRole();
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
@@ -284,21 +286,23 @@ export default function RecipesScreen() {
             <Text variant="hero" style={styles.headline}>
               Recipes
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="New recipe"
-              style={({ pressed }) => [
-                styles.newButton,
-                pressed && styles.newButtonPressed,
-              ]}
-              onPress={() => router.push("/create-recipe")}
-            >
-              <UniSymbol
-                name={{ ios: "plus", android: "add", web: "add" }}
-                size={14}
-              />
-              <Text style={styles.newButtonLabel}>New</Text>
-            </Pressable>
+            {canInteract ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="New recipe"
+                style={({ pressed }) => [
+                  styles.newButton,
+                  pressed && styles.newButtonPressed,
+                ]}
+                onPress={() => router.push("/create-recipe")}
+              >
+                <UniSymbol
+                  name={{ ios: "plus", android: "add", web: "add" }}
+                  size={14}
+                />
+                <Text style={styles.newButtonLabel}>New</Text>
+              </Pressable>
+            ) : null}
           </View>
           <Text color="textSecondary" variant="label">
             {recipes.length} recipes · avg food cost {avgFoodCost.toFixed(1)}% ·{" "}
@@ -315,6 +319,7 @@ export default function RecipesScreen() {
         </View>
 
         <Categories
+          hideAddButton={!canInteract}
           categories={categories}
           selected={selectedCategory}
           onSelect={setCategory}
@@ -406,6 +411,7 @@ export default function RecipesScreen() {
       <RecipeView
         ref={recipeSheetRef}
         recipe={selectedRecipe}
+        hideButtons={!canInteract}
         symbol={symbol}
         targetFoodCost={targetFoodCost}
         onEdit={handleEditRecipe}

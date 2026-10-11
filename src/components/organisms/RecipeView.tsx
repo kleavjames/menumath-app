@@ -48,6 +48,7 @@ type RecipeViewProps = {
   onEdit: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
   onDismiss?: () => void;
+  hideButtons?: boolean;
 };
 
 export const RecipeView = ({
@@ -58,6 +59,7 @@ export const RecipeView = ({
   onEdit,
   onDelete,
   onDismiss,
+  hideButtons = false,
 }: RecipeViewProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -130,34 +132,38 @@ export const RecipeView = ({
             </View>
 
             <View style={styles.actions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${recipe.name}`}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-                onPress={() => onEdit(recipe)}
-              >
-                <UniSymbol
-                  name={{ ios: "pencil", android: "edit", web: "edit" }}
-                  size={16}
-                />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${recipe.name}`}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  pressed && styles.actionButtonPressed,
-                ]}
-                onPress={() => onDelete(recipe)}
-              >
-                <UniDangerSymbol
-                  name={{ ios: "trash", android: "delete", web: "delete" }}
-                  size={16}
-                />
-              </Pressable>
+              {!hideButtons ? (
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${recipe.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onEdit(recipe)}
+                  >
+                    <UniSymbol
+                      name={{ ios: "pencil", android: "edit", web: "edit" }}
+                      size={16}
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${recipe.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onDelete(recipe)}
+                  >
+                    <UniDangerSymbol
+                      name={{ ios: "trash", android: "delete", web: "delete" }}
+                      size={16}
+                    />
+                  </Pressable>
+                </>
+              ) : null}
             </View>
           </View>
 

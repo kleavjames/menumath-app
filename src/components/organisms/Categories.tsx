@@ -23,6 +23,7 @@ type CategoriesProps = {
   onCreate: (name: string) => void;
   onRename: (from: string, to: string, id: string) => void;
   onDelete: (name: string) => void;
+  hideAddButton?: boolean;
 };
 
 export const Categories = ({
@@ -32,6 +33,7 @@ export const Categories = ({
   onCreate,
   onRename,
   onDelete,
+  hideAddButton = false,
 }: CategoriesProps) => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -206,21 +208,25 @@ export const Categories = ({
       {isCreating ? (
         renderCategoryInput(finishCreating)
       ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add category"
-          style={({ pressed }) => [
-            styles.addButton,
-            pressed && styles.addButtonPressed,
-          ]}
-          onPress={startCreating}
-        >
-          <UniSymbol
-            name={{ ios: "plus", android: "add", web: "add" }}
-            size={14}
-          />
-          <Text style={styles.addLabel}>Category</Text>
-        </Pressable>
+        <>
+          {!hideAddButton ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add category"
+              style={({ pressed }) => [
+                styles.addButton,
+                pressed && styles.addButtonPressed,
+              ]}
+              onPress={startCreating}
+            >
+              <UniSymbol
+                name={{ ios: "plus", android: "add", web: "add" }}
+                size={14}
+              />
+              <Text style={styles.addLabel}>Category</Text>
+            </Pressable>
+          ) : null}
+        </>
       )}
     </ScrollView>
   );

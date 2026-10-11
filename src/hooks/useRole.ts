@@ -8,9 +8,12 @@ export const useRole = () => {
   const isManager = role === MembershipRole.MANAGER;
   const isStaff = role === MembershipRole.STAFF;
 
+  const canInteract = isOwner || isManager;
+
   return {
     isOwner,
     isManager,
     isStaff,
+    canInteract,
   };
 };

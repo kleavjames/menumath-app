@@ -38,6 +38,7 @@ type IngredientViewProps = {
   onEdit: (ingredient: Ingredient) => void;
   onDelete: (ingredient: Ingredient) => void;
   onDismiss?: () => void;
+  hideButtons?: boolean;
 };
 
 type DetailRowProps = {
@@ -65,6 +66,7 @@ export const IngredientView = ({
   symbol,
   onEdit,
   onDelete,
+  hideButtons = false,
   onDismiss,
 }: IngredientViewProps) => {
   const insets = useSafeAreaInsets();
@@ -137,36 +139,38 @@ export const IngredientView = ({
                 ) : null}
               </View>
 
-              <View style={styles.actions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Edit ${ingredient.name}`}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                  onPress={() => onEdit(ingredient)}
-                >
-                  <UniSymbol
-                    name={{ ios: "pencil", android: "edit", web: "edit" }}
-                    size={16}
-                  />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${ingredient.name}`}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                  onPress={() => onDelete(ingredient)}
-                >
-                  <UniDangerSymbol
-                    name={{ ios: "trash", android: "delete", web: "delete" }}
-                    size={16}
-                  />
-                </Pressable>
-              </View>
+              {!hideButtons ? (
+                <View style={styles.actions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${ingredient.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onEdit(ingredient)}
+                  >
+                    <UniSymbol
+                      name={{ ios: "pencil", android: "edit", web: "edit" }}
+                      size={16}
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${ingredient.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onDelete(ingredient)}
+                  >
+                    <UniDangerSymbol
+                      name={{ ios: "trash", android: "delete", web: "delete" }}
+                      size={16}
+                    />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
 
             <BigInfoCard

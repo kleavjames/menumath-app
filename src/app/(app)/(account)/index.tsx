@@ -22,7 +22,7 @@ const UniChevron = withUnistyles(SymbolView, (theme) => ({
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const { isOwner } = useRole();
+  const { canInteract } = useRole();
 
   const business = useAccountUserStore((state) => state.business);
   const user = useAccountUserStore((state) => state.user);
@@ -125,7 +125,7 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
-              disabled={!isOwner}
+              disabled={!canInteract}
               label="Business"
               value={business?.name ?? "No business"}
               onPress={() => router.push("/business")}
@@ -149,21 +149,21 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
-              disabled={!isOwner}
+              disabled={!canInteract}
               label="Currency"
               value={business?.currency ?? Currency.USD}
               onPress={() => router.push("/currency")}
             />
             <View style={styles.divider} />
             <AccountsRow
-              disabled={!isOwner}
+              disabled={!canInteract}
               label="Units"
               value={formatCapitalized(business?.unitSystem ?? UnitSystem.BOTH)}
               onPress={() => router.push("/unitSystem")}
             />
             <View style={styles.divider} />
             <AccountsRow
-              disabled={!isOwner}
+              disabled={!canInteract}
               label="Target food cost"
               subtitle="Flag recipes above this"
               showChevron={false}
@@ -173,7 +173,7 @@ export default function SettingsScreen() {
                   onChange={setTargetFoodCost}
                   min={1}
                   max={100}
-                  disabled={!isOwner}
+                  disabled={!canInteract}
                   suffix="%"
                 />
               }
