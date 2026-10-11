@@ -1,7 +1,11 @@
-import { parseRecipe } from "@/helpers/recipe";
-import { ApiError, ApiErrorPayload } from "@/types/common";
-import { RecipeIngredientPayload } from "@/types/ingredient";
-import { Recipe, RecipeStep } from "@/types/recipe";
+import { parseRecipe } from "@/helpers";
+import {
+  ApiError,
+  ApiErrorPayload,
+  Recipe,
+  RecipeIngredientPayload,
+  RecipeStep,
+} from "@/types";
 import client from "./client";
 
 export interface CreateRecipePayload {
@@ -47,7 +51,10 @@ export const getRecipe = async (id: string) => {
   return parseRecipe(response.data as Recipe);
 };
 
-export const updateRecipe = async (id: string, payload: UpdateRecipePayload) => {
+export const updateRecipe = async (
+  id: string,
+  payload: UpdateRecipePayload,
+) => {
   const response = await client.patch<Recipe | ApiErrorPayload>(
     `/recipes/${id}`,
     payload,

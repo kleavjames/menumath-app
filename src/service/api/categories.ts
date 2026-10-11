@@ -1,7 +1,4 @@
-import { ApiError } from "@/types/common";
-
-import { Category, CategoryType } from "@/types/business";
-import { ApiErrorPayload } from "@/types/common";
+import { ApiError, ApiErrorPayload, Category, CategoryType } from "@/types";
 import client from "./client";
 
 interface CreateCategoryPayload {

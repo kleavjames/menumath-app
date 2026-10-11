@@ -7,88 +7,43 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, StepperInput, Text } from "@/components/atoms";
 import { BuildVersion } from "@/components/molecules";
+import { AccountsRow } from "@/components/templates/AccountsRow";
+import { formatCapitalized, getInitials } from "@/helpers";
+import { useRole, useTeamMembers } from "@/hooks";
 import { useAuth } from "@/provider/AuthProvider";
-import { signOut } from "@/service/api/auth";
-import { useAccountUserStore } from "@/store/accountUser";
-import { ApiError } from "@/types/common";
+import { signOut } from "@/service/api";
+import { useAccountUserStore, useInvitationCodeStore } from "@/store";
+import { ApiError, Currency, UnitSystem } from "@/types";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
 }));
 
-type SettingsRowProps = {
-  label: string;
-  value?: string;
-  subtitle?: string;
-  onPress?: () => void;
-  showChevron?: boolean;
-  trailing?: React.ReactNode;
-};
-
-const SettingsRow = ({
-  label,
-  value,
-  subtitle,
-  onPress,
-  showChevron = true,
-  trailing,
-}: SettingsRowProps) => {
-  const content = (
-    <View style={styles.row}>
-      <View style={styles.rowCopy}>
-        <Text>{label}</Text>
-        {subtitle ? (
-          <Text variant="caption" color="textSecondary">
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-      <View style={styles.rowTrailing}>
-        {trailing ??
-          (value ? <Text color="textSecondary">{value}</Text> : null)}
-        {showChevron ? (
-          <UniChevron
-            name={{
-              ios: "chevron.right",
-              android: "chevron_right",
-              web: "chevron_right",
-            }}
-            size={16}
-          />
-        ) : null}
-      </View>
-    </View>
-  );
-
-  if (!onPress) {
-    return content;
-  }
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      style={({ pressed }) => [pressed && styles.rowPressed]}
-      onPress={onPress}
-    >
-      {content}
-    </Pressable>
-  );
-};
-
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const { canInteract } = useRole();
+  const { teamMembersCount } = useTeamMembers();
+
+  const business = useAccountUserStore((state) => state.business);
+  const user = useAccountUserStore((state) => state.user);
 
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
+  const clearInvitationCode = useInvitationCodeStore(
+    (state) => state.clearInvitationCode,
+  );
 
-  const [targetFoodCost, setTargetFoodCost] = useState(30);
+  const [targetFoodCost, setTargetFoodCost] = useState(
+    Number(business?.targetFoodCost ?? 40),
+  );
 
   const onSignOut = async () => {
     try {
       await signOut();
       clearAccountUser();
+      clearInvitationCode();
       logout();
       router.replace("/signin");
     } catch (error) {
@@ -123,7 +78,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text variant="hero" style={styles.headline}>
-          Settings
+          Account
         </Text>
 
         <Card style={styles.listCard}>
@@ -133,17 +88,17 @@ export default function SettingsScreen() {
               styles.profileRow,
               pressed && styles.rowPressed,
             ]}
-            onPress={() => {
-              // TODO: open profile
-            }}
+            onPress={() => router.push("/profile")}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>J</Text>
+              <Text style={styles.avatarLabel}>
+                {getInitials(user?.fullName ?? "")}
+              </Text>
             </View>
             <View style={styles.profileCopy}>
-              <Text style={styles.profileName}>jamesada</Text>
+              <Text style={styles.profileName}>{user?.fullName}</Text>
               <Text variant="caption" color="textSecondary">
-                test@gmail.com
+                {user?.username}
               </Text>
             </View>
             <UniChevron
@@ -166,20 +121,17 @@ export default function SettingsScreen() {
             Business
           </Text>
           <Card style={styles.listCard}>
-            <SettingsRow
+            <AccountsRow
+              disabled={!canInteract}
               label="Business"
-              value="Lark & Crumb"
-              onPress={() => {
-                // TODO: edit business
-              }}
+              value={business?.name ?? "No business"}
+              onPress={() => router.push("/business")}
             />
             <View style={styles.divider} />
-            <SettingsRow
+            <AccountsRow
               label="Team"
-              value="3 members"
-              onPress={() => {
-                // TODO: open team
-              }}
+              value={`${teamMembersCount} members`}
+              onPress={() => router.push("/teams")}
             />
           </Card>
         </View>
@@ -193,23 +145,22 @@ export default function SettingsScreen() {
             Costing
           </Text>
           <Card style={styles.listCard}>
-            <SettingsRow
+            <AccountsRow
+              disabled={!canInteract}
               label="Currency"
-              value="USD · $"
-              onPress={() => {
-                // TODO: change currency
-              }}
+              value={business?.currency ?? Currency.USD}
+              onPress={() => router.push("/currency")}
             />
             <View style={styles.divider} />
-            <SettingsRow
+            <AccountsRow
+              disabled={!canInteract}
               label="Units"
-              value="Metric"
-              onPress={() => {
-                // TODO: change units
-              }}
+              value={formatCapitalized(business?.unitSystem ?? UnitSystem.BOTH)}
+              onPress={() => router.push("/unitSystem")}
             />
             <View style={styles.divider} />
-            <SettingsRow
+            <AccountsRow
+              disabled={!canInteract}
               label="Target food cost"
               subtitle="Flag recipes above this"
               showChevron={false}
@@ -219,6 +170,7 @@ export default function SettingsScreen() {
                   onChange={setTargetFoodCost}
                   min={1}
                   max={100}
+                  disabled={!canInteract}
                   suffix="%"
                 />
               }
@@ -297,23 +249,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   profileName: {
     fontFamily: theme.fontFamily.semiBold,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: theme.gap(2),
-    paddingVertical: theme.gap(2),
-    paddingHorizontal: theme.gap(2.5),
-  },
-  rowCopy: {
-    flex: 1,
-    gap: theme.gap(0.375),
-  },
-  rowTrailing: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.gap(1),
   },
   rowPressed: {
     opacity: 0.7,

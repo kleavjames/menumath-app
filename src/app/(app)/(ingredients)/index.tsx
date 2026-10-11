@@ -9,24 +9,26 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories, IngredientView } from "@/components/organisms";
-import { CURRENCY_SYMBOLS } from "@/constants/units";
-import {
-  formatPackPrice,
-  formatPackSize,
-  formatUnitCost,
-} from "@/helpers/unit";
-import { useKeyboard } from "@/hooks";
+import { CURRENCY_SYMBOLS } from "@/constants";
+import { formatPackPrice, formatPackSize, formatUnitCost } from "@/helpers";
+import { useKeyboard, useRole } from "@/hooks";
 import {
   createCategory,
   deleteCategory,
+  deleteIngredient,
   getCategories,
+  getIngredients,
   updateCategory,
-} from "@/service/api/categories";
-import { deleteIngredient, getIngredients } from "@/service/api/ingredients";
-import { useAccountUserStore } from "@/store/accountUser";
-import { Category, CategoryType, Currency } from "@/types/business";
-import { ApiError } from "@/types/common";
-import { Ingredient } from "@/types/ingredient";
+} from "@/service/api";
+import { useAccountUserStore } from "@/store";
+import {
+  ApiError,
+  Category,
+  CategoryType,
+  Currency,
+  Ingredient,
+} from "@/types";
+
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.background,
 }));
@@ -41,6 +43,7 @@ const ALL_CATEGORY: IngredientCategory = { id: "all", name: "All" };
 export default function IngredientsScreen() {
   const insets = useSafeAreaInsets();
   const { dismissKeyboard } = useKeyboard();
+  const { canInteract } = useRole();
 
   const businessId = useAccountUserStore((state) => state.businessId);
   const currency = useAccountUserStore(
@@ -257,21 +260,23 @@ export default function IngredientsScreen() {
             <Text variant="hero" style={styles.headline}>
               Ingredients
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="New ingredient"
-              style={({ pressed }) => [
-                styles.newButton,
-                pressed && styles.newButtonPressed,
-              ]}
-              onPress={() => router.push("/create-ingredient")}
-            >
-              <UniSymbol
-                name={{ ios: "plus", android: "add", web: "add" }}
-                size={14}
-              />
-              <Text style={styles.newButtonLabel}>New</Text>
-            </Pressable>
+            {canInteract ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="New ingredient"
+                style={({ pressed }) => [
+                  styles.newButton,
+                  pressed && styles.newButtonPressed,
+                ]}
+                onPress={() => router.push("/create-ingredient")}
+              >
+                <UniSymbol
+                  name={{ ios: "plus", android: "add", web: "add" }}
+                  size={14}
+                />
+                <Text style={styles.newButtonLabel}>New</Text>
+              </Pressable>
+            ) : null}
           </View>
           <Text color="textSecondary" variant="label">
             {ingredients.length} items · prices in {currency}
@@ -291,6 +296,7 @@ export default function IngredientsScreen() {
           categories={categories}
           selected={selectedCategory}
           onSelect={setCategory}
+          hideAddButton={!canInteract}
           onCreate={handleCreateCategory}
           onRename={handleRenameCategory}
           onDelete={handleDeleteCategory}
@@ -358,6 +364,7 @@ export default function IngredientsScreen() {
 
       <IngredientView
         ref={ingredientSheetRef}
+        hideButtons={!canInteract}
         ingredient={selectedIngredient}
         categoryName={
           selectedIngredient

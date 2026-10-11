@@ -3,20 +3,48 @@ import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Button, PinCode, Text } from "@/components/atoms";
+import { Button, PinCode, showToast, Text } from "@/components/atoms";
 import { BackButton } from "@/components/molecules";
-
-const DEMO_CODE = "482913";
+import { useAuth } from "@/provider/AuthProvider";
+import { redeemCode } from "@/service/api";
+import { useAccountUserStore, useCreateAccountStore } from "@/store";
+import { ApiError } from "@/types";
+import { router } from "expo-router";
 
 const InviteCode = () => {
   const insets = useSafeAreaInsets();
+  const { login } = useAuth();
+
+  const fullName = useCreateAccountStore((state) => state.fullName);
+  const username = useCreateAccountStore((state) => state.username);
+  const password = useCreateAccountStore((state) => state.password);
+  const setAccountUser = useAccountUserStore((state) => state.setAccountUser);
+
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
-  const handleJoinTeam = () => {
+  const handleJoinTeam = async () => {
     if (code.length !== 6) return;
-    // TODO: validate invite code and join team
-    setError(false);
+    try {
+      const response = await redeemCode({
+        code,
+        fullName,
+        username,
+        password,
+      });
+      login(response.accessToken);
+      setAccountUser(response);
+      showToast("Joined team successfully", { variant: "default" });
+      router.replace("/(app)/(recipes)");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    } finally {
+      setError(false);
+    }
   };
 
   return (
@@ -41,7 +69,7 @@ const InviteCode = () => {
               Join your team
             </Text>
             <Text color="textSecondary">
-              Enter the 6-digit code from your invitation email.
+              Enter the 6-character code from your invitation email.
             </Text>
           </View>
 

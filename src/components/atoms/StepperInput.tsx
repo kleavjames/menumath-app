@@ -13,6 +13,7 @@ interface StepperProps {
   onChange: (value: number) => void;
   step?: number;
   min?: number;
+  disabled?: boolean;
   max?: number;
   suffix?: string;
   style?: StyleProp<ViewStyle>;
@@ -20,6 +21,7 @@ interface StepperProps {
 
 export const StepperInput = ({
   value,
+  disabled = false,
   onChange,
   step = 1,
   min,
@@ -41,11 +43,11 @@ export const StepperInput = ({
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, disabled && styles.disabled, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Decrease"
-        disabled={!canDecrement}
+        disabled={disabled || !canDecrement}
         hitSlop={8}
         onPress={decrement}
         style={styles.button}
@@ -64,7 +66,7 @@ export const StepperInput = ({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Increase"
-        disabled={!canIncrement}
+        disabled={disabled || !canIncrement}
         hitSlop={8}
         onPress={increment}
         style={styles.button}
@@ -90,6 +92,9 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.gap(1),
     paddingHorizontal: theme.gap(2),
+  },
+  disabled: {
+    opacity: 0.5,
   },
   button: {
     alignItems: "center",

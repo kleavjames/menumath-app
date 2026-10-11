@@ -10,10 +10,8 @@ export interface User {
   id: string;
   fullName: string;
   username: string;
-  tokenVersion: number;
   createdAt: string;
   updatedAt: string;
-  memberships: Membership[];
 }
 
 export interface Membership {
@@ -24,4 +22,10 @@ export interface Membership {
   createdAt: string;
   updatedAt: string;
   business: Business;
+}
+
+export interface TeamMemberShort extends Omit<Membership, "business"> {}
+
+export interface TeamMember extends User {
+  membership: TeamMemberShort;
 }

@@ -19,40 +19,17 @@ import {
   Text,
 } from "@/components/atoms";
 import { BackButton, SelectInput, TextInput } from "@/components/molecules";
+import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS } from "@/constants";
 import { useAuth } from "@/provider/AuthProvider";
-import { signUp } from "@/service/api/auth";
-import { useCreateAccountStore } from "@/store/createAccount";
-import { BusinessType, Currency } from "@/types/business";
-import { ApiError } from "@/types/common";
+import { signUp } from "@/service/api";
+import { useAccountUserStore, useCreateAccountStore } from "@/store";
+import { ApiError, BusinessType, Currency } from "@/types";
 import { router } from "expo-router";
 
 type FieldErrors = {
   businessName?: string;
   businessType?: string;
 };
-
-const BUSINESS_TYPE_OPTIONS = [
-  { label: "Cafe", value: BusinessType.CAFE },
-  { label: "Restaurant", value: BusinessType.RESTAURANT },
-  { label: "Bakery", value: BusinessType.BAKERY },
-  { label: "Bar", value: BusinessType.BAR },
-  { label: "Food Truck", value: BusinessType.FOOD_TRUCK },
-  { label: "Catering", value: BusinessType.CATERING },
-];
-
-const CURRENCY_OPTIONS = [
-  { label: "USD — US Dollar", value: Currency.USD },
-  { label: "EUR — Euro", value: Currency.EUR },
-  { label: "GBP — British Pound", value: Currency.GBP },
-  { label: "CAD — Canadian Dollar", value: Currency.CAD },
-  { label: "AUD — Australian Dollar", value: Currency.AUD },
-  { label: "PHP — Philippine Peso", value: Currency.PHP },
-  { label: "INR — Indian Rupee", value: Currency.INR },
-  { label: "MXN — Mexican Peso", value: Currency.MXN },
-  { label: "NZD — New Zealand Dollar", value: Currency.NZD },
-  { label: "SGD — Singapore Dollar", value: Currency.SGD },
-  { label: "JPY — Japanese Yen", value: Currency.JPY },
-];
 
 const CreateBusiness = () => {
   const insets = useSafeAreaInsets();
@@ -71,6 +48,7 @@ const CreateBusiness = () => {
   const fullName = useCreateAccountStore((state) => state.fullName);
   const username = useCreateAccountStore((state) => state.username);
   const password = useCreateAccountStore((state) => state.password);
+  const setAccountUser = useAccountUserStore((state) => state.setAccountUser);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -112,6 +90,7 @@ const CreateBusiness = () => {
       });
 
       login(response.accessToken);
+      setAccountUser(response);
       showToast("Business created successfully", { variant: "default" });
       router.push("/(app)/(recipes)");
     } catch (error) {

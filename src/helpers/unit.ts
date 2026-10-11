@@ -1,14 +1,13 @@
-import { UNIT_OPTIONS } from "@/constants/units";
-import { MetricUnit } from "@/types/business";
-import { Ingredient } from "@/types/ingredient";
+import { METRIC_OPTIONS } from "@/constants";
+import { Ingredient, MetricUnit } from "@/types";
 import { formatAmount, formatPrice, toNumber } from "./money";
 
 export const unitLabel = (unit: MetricUnit | string) =>
-  UNIT_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
+  METRIC_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
 
 /** Unit that `usableCostPerItem` is expressed in, e.g. kg -> g. */
 export const costUnitLabel = (unit: MetricUnit) => {
-  const option = UNIT_OPTIONS.find((item) => item.value === unit);
+  const option = METRIC_OPTIONS.find((item) => item.value === unit);
   if (option?.subUnit) return unitLabel(option.subUnit.label);
   return option?.label ?? unit;
 };

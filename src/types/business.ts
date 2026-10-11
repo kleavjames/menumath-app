@@ -40,6 +40,11 @@ export enum MetricUnit {
   LB = "LB",
   OZ = "OZ",
   EACH = "EACH",
+  TSP = "TSP",
+  TBSP = "TBSP",
+  CUP = "CUP",
+  GAL = "GAL",
+  DOZEN = "DOZEN",
 }
 
 export type UnitOption = {

@@ -13,9 +13,9 @@ import { StyleSheet } from "react-native-unistyles";
 import { Button, Loader, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
 import { useAuth } from "@/provider/AuthProvider";
-import { signIn } from "@/service/api/auth";
-import { useAccountUserStore } from "@/store/accountUser";
-import { ApiError } from "@/types/common";
+import { signIn } from "@/service/api";
+import { useAccountUserStore } from "@/store";
+import { ApiError } from "@/types";
 import { Image } from "expo-image";
 
 type FieldErrors = {
@@ -72,7 +72,7 @@ const SignIn = () => {
     try {
       const response = await signIn(username, password);
       login(response.accessToken);
-      setAccountUser(response.user);
+      setAccountUser(response);
       showToast("Signed in successfully", { variant: "default" });
       router.replace("/(app)/(recipes)");
     } catch (err) {

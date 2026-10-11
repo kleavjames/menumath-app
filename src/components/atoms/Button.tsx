@@ -1,5 +1,6 @@
 import {
   Pressable,
+  TextStyle,
   type PressableProps,
   type StyleProp,
   type ViewStyle,
@@ -12,12 +13,14 @@ interface ButtonProps extends Omit<PressableProps, "children" | "style"> {
   children: string;
   variant?: "fill" | "outline";
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 export const Button = ({
   children,
   variant = "fill",
   disabled,
+  textStyle,
   style,
   ...props
 }: ButtonProps) => {
@@ -37,7 +40,7 @@ export const Button = ({
       ]}
       {...props}
     >
-      <Text style={styles.label}>{children}</Text>
+      <Text style={[styles.label, textStyle]}>{children}</Text>
     </Pressable>
   );
 };

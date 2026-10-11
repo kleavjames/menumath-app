@@ -11,11 +11,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
-import { BigInfoCard } from "@/components/templates/BigInfoCard";
-import { UNIT_OPTIONS } from "@/constants/units";
-import { formatAmount, formatPrice, toNumber } from "@/helpers/money";
-import { formatPackSize, unitLabel } from "@/helpers/unit";
-import { Ingredient } from "@/types/ingredient";
+import { BigInfoCard } from "@/components/templates";
+import { METRIC_OPTIONS } from "@/constants";
+import {
+  formatAmount,
+  formatPackSize,
+  formatPrice,
+  toNumber,
+  unitLabel,
+} from "@/helpers";
+import { Ingredient } from "@/types";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.text,
@@ -33,6 +38,7 @@ type IngredientViewProps = {
   onEdit: (ingredient: Ingredient) => void;
   onDelete: (ingredient: Ingredient) => void;
   onDismiss?: () => void;
+  hideButtons?: boolean;
 };
 
 type DetailRowProps = {
@@ -60,6 +66,7 @@ export const IngredientView = ({
   symbol,
   onEdit,
   onDelete,
+  hideButtons = false,
   onDismiss,
 }: IngredientViewProps) => {
   const insets = useSafeAreaInsets();
@@ -87,7 +94,7 @@ export const IngredientView = ({
   // `usableCostPerItem` is stored per sub unit (e.g. g) when the unit has one,
   // otherwise per unit — mirror the breakdown shown on the create screen.
   const renderCost = (item: Ingredient) => {
-    const option = UNIT_OPTIONS.find((o) => o.value === item.itemSizeUnit);
+    const option = METRIC_OPTIONS.find((o) => o.value === item.itemSizeUnit);
     const stored = toNumber(item.usableCostPerItem);
     const subUnit = option?.subUnit;
 
@@ -132,36 +139,38 @@ export const IngredientView = ({
                 ) : null}
               </View>
 
-              <View style={styles.actions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Edit ${ingredient.name}`}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                  onPress={() => onEdit(ingredient)}
-                >
-                  <UniSymbol
-                    name={{ ios: "pencil", android: "edit", web: "edit" }}
-                    size={16}
-                  />
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Delete ${ingredient.name}`}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                  onPress={() => onDelete(ingredient)}
-                >
-                  <UniDangerSymbol
-                    name={{ ios: "trash", android: "delete", web: "delete" }}
-                    size={16}
-                  />
-                </Pressable>
-              </View>
+              {!hideButtons ? (
+                <View style={styles.actions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${ingredient.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onEdit(ingredient)}
+                  >
+                    <UniSymbol
+                      name={{ ios: "pencil", android: "edit", web: "edit" }}
+                      size={16}
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${ingredient.name}`}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      pressed && styles.actionButtonPressed,
+                    ]}
+                    onPress={() => onDelete(ingredient)}
+                  >
+                    <UniDangerSymbol
+                      name={{ ios: "trash", android: "delete", web: "delete" }}
+                      size={16}
+                    />
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
 
             <BigInfoCard

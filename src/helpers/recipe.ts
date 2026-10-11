@@ -1,5 +1,5 @@
-import { roundTo2, toNumber } from "@/helpers/money";
-import { Recipe } from "@/types/recipe";
+import { roundTo2, toNumber } from "@/helpers";
+import { Recipe } from "@/types";
 
 const hasApiNumber = (value: unknown): value is string | number =>
   value !== undefined && value !== null && value !== "";
