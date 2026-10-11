@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore } from "@/store";
 import { create } from "apisauce";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;

@@ -8,13 +8,12 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, StepperInput, Text } from "@/components/atoms";
 import { BuildVersion } from "@/components/molecules";
 import { AccountsRow } from "@/components/templates/AccountsRow";
-import { formatCapitalized, getInitials } from "@/helpers/format";
+import { formatCapitalized, getInitials } from "@/helpers";
+import { useRole } from "@/hooks";
 import { useAuth } from "@/provider/AuthProvider";
-import { signOut } from "@/service/api/auth";
-import { useAccountUserStore } from "@/store/accountUser";
-import { Currency, UnitSystem } from "@/types/business";
-import { ApiError } from "@/types/common";
-import { MembershipRole } from "@/types/user";
+import { signOut } from "@/service/api";
+import { useAccountUserStore } from "@/store";
+import { ApiError, Currency, MembershipRole, UnitSystem } from "@/types";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
@@ -23,6 +22,7 @@ const UniChevron = withUnistyles(SymbolView, (theme) => ({
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const { isOwner } = useRole();
 
   const business = useAccountUserStore((state) => state.business);
   const user = useAccountUserStore((state) => state.user);
@@ -125,6 +125,7 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
+              disabled={!isOwner}
               label="Business"
               value={business?.name ?? "No business"}
               onPress={() => router.push("/business")}
@@ -148,18 +149,21 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
+              disabled={!isOwner}
               label="Currency"
               value={business?.currency ?? Currency.USD}
               onPress={() => router.push("/currency")}
             />
             <View style={styles.divider} />
             <AccountsRow
+              disabled={!isOwner}
               label="Units"
               value={formatCapitalized(business?.unitSystem ?? UnitSystem.BOTH)}
               onPress={() => router.push("/unitSystem")}
             />
             <View style={styles.divider} />
             <AccountsRow
+              disabled={!isOwner}
               label="Target food cost"
               subtitle="Flag recipes above this"
               showChevron={false}
@@ -169,6 +173,7 @@ export default function SettingsScreen() {
                   onChange={setTargetFoodCost}
                   min={1}
                   max={100}
+                  disabled={!isOwner}
                   suffix="%"
                 />
               }

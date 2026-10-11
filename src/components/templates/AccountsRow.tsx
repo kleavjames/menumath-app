@@ -15,11 +15,13 @@ export type AccountsRowProps = {
   onPress?: () => void;
   showChevron?: boolean;
   trailing?: React.ReactNode;
+  disabled?: boolean;
 };
 
 export const AccountsRow = ({
   label,
   value,
+  disabled = false,
   subtitle,
   onPress,
   showChevron = true,
@@ -28,7 +30,7 @@ export const AccountsRow = ({
   const content = (
     <View style={styles.row}>
       <View style={styles.rowCopy}>
-        <Text>{label}</Text>
+        <Text variant="label">{label}</Text>
         {subtitle ? (
           <Text variant="caption" color="textSecondary">
             {subtitle}
@@ -38,7 +40,7 @@ export const AccountsRow = ({
       <View style={styles.rowTrailing}>
         {trailing ??
           (value ? <Text color="textSecondary">{value}</Text> : null)}
-        {showChevron ? (
+        {showChevron && !disabled ? (
           <UniChevron
             name={{
               ios: "chevron.right",
@@ -58,6 +60,7 @@ export const AccountsRow = ({
   return (
     <Pressable
       accessibilityRole="button"
+      disabled={disabled}
       style={({ pressed }) => [pressed && styles.rowPressed]}
       onPress={onPress}
     >

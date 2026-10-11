@@ -5,7 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Text } from "@/components/atoms";
 import { BackButton, TextInput } from "@/components/molecules";
-import { useCreateAccountStore } from "@/store/createAccount";
+import { useCreateAccountStore } from "@/store";
 import { router } from "expo-router";
 
 type FieldErrors = {

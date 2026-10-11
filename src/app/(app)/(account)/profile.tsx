@@ -12,8 +12,8 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
-import { formatRole, getInitials } from "@/helpers/format";
-import { useAccountUserStore } from "@/store/accountUser";
+import { formatRole, getInitials } from "@/helpers";
+import { useAccountUserStore } from "@/store";
 
 type FieldErrors = {
   fullName?: string;

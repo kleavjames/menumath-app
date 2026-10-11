@@ -1,5 +1,4 @@
-import { Business } from "@/types/business";
-import { Membership, User } from "@/types/user";
+import { Business, Membership, MembershipRole, User } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -10,6 +9,7 @@ interface UserBusinessState {
   teamMembers: Membership[];
   business: Business | null;
   businessId: string | null;
+  role: MembershipRole | null;
 }
 
 interface AccountUserState extends UserBusinessState {
@@ -23,6 +23,7 @@ const initialState: UserBusinessState = {
   membership: null,
   business: null,
   businessId: null,
+  role: null,
 };
 
 export const useAccountUserStore = create<AccountUserState>()(
@@ -40,6 +41,7 @@ export const useAccountUserStore = create<AccountUserState>()(
           teamMembers: memberships,
           business,
           businessId: business.id,
+          role: membership.role,
         });
       },
       clearAccountUser: () =>

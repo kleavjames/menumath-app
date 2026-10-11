@@ -1,4 +1,4 @@
-import { MembershipRole } from "@/types/user";
+import { MembershipRole } from "@/types";
 
 export const getInitials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean);

@@ -4,9 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
-import { CURRENCIES } from "@/constants/business";
-import { useAccountUserStore } from "@/store/accountUser";
-import { Currency } from "@/types/business";
+import { CURRENCIES } from "@/constants";
+import { useAccountUserStore } from "@/store";
+import { Currency } from "@/types";
 
 export default function CurrencyScreen() {
   const insets = useSafeAreaInsets();

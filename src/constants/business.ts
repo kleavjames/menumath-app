@@ -1,5 +1,4 @@
-import { BusinessType, Currency } from "@/types/business";
-import { MembershipRole } from "@/types/user";
+import { BusinessType, Currency, MembershipRole } from "@/types";
 
 export const BUSINESS_TYPE_OPTIONS = [
   { label: "Cafe", value: BusinessType.CAFE },

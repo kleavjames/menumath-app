@@ -6,9 +6,9 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
 import { ButtonGroupView } from "@/components/molecules";
-import { IMPERIAL_OPTIONS, METRIC_OPTIONS } from "@/constants/units";
-import { useAccountUserStore } from "@/store/accountUser";
-import { MetricUnit, UnitOption, UnitSystem } from "@/types/business";
+import { IMPERIAL_OPTIONS, METRIC_OPTIONS } from "@/constants";
+import { useAccountUserStore } from "@/store";
+import { MetricUnit, UnitOption, UnitSystem } from "@/types";
 
 const UNIT_SYSTEM_TABS = [
   { label: "Metric", value: UnitSystem.METRIC },

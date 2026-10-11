@@ -18,9 +18,9 @@ import {
   Text,
   ToggleButton,
 } from "@/components/atoms";
-import { INVITE_CODE_ROLE_OPTIONS } from "@/constants/business";
-import { useAccountUserStore } from "@/store/accountUser";
-import { MembershipRole } from "@/types/user";
+import { INVITE_CODE_ROLE_OPTIONS } from "@/constants";
+import { useAccountUserStore } from "@/store";
+import { MembershipRole } from "@/types";
 
 const generateInviteCode = () =>
   Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join("");

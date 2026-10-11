@@ -6,8 +6,6 @@ import { StyleSheet } from "react-native-unistyles";
 import { Button, PinCode, Text } from "@/components/atoms";
 import { BackButton } from "@/components/molecules";
 
-const DEMO_CODE = "482913";
-
 const InviteCode = () => {
   const insets = useSafeAreaInsets();
   const [code, setCode] = useState("");

@@ -1,6 +1,10 @@
-import { CategoryType, MetricUnit } from "@/types/business";
-import { ApiError, ApiErrorPayload } from "@/types/common";
-import { Ingredient } from "@/types/ingredient";
+import {
+  ApiError,
+  ApiErrorPayload,
+  CategoryType,
+  Ingredient,
+  MetricUnit,
+} from "@/types";
 import client from "./client";
 
 export interface CreateIngredientPayload {

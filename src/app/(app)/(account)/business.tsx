@@ -12,9 +12,9 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Pill, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
-import { BUSINESS_TYPE_OPTIONS } from "@/constants/business";
-import { useAccountUserStore } from "@/store/accountUser";
-import { BusinessType } from "@/types/business";
+import { BUSINESS_TYPE_OPTIONS } from "@/constants";
+import { useAccountUserStore } from "@/store";
+import { BusinessType } from "@/types";
 
 type FieldErrors = {
   businessName?: string;
