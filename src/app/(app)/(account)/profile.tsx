@@ -10,10 +10,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Card, Text } from "@/components/atoms";
+import { Card, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
 import { formatRole, getInitials } from "@/helpers";
+import { updateMyAccount } from "@/service/api";
 import { useAccountUserStore } from "@/store";
+import { ApiError } from "@/types";
 
 type FieldErrors = {
   fullName?: string;
@@ -22,8 +24,10 @@ type FieldErrors = {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+
   const user = useAccountUserStore((state) => state.user);
   const membership = useAccountUserStore((state) => state.membership);
+  const setUpdatedUser = useAccountUserStore((state) => state.setUpdatedUser);
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
@@ -54,9 +58,23 @@ export default function ProfileScreen() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    router.back();
+    try {
+      const response = await updateMyAccount({
+        fullName,
+        username,
+      });
+      setUpdatedUser(response);
+      showToast("Profile updated successfully", { variant: "default" });
+      router.back();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
   };
 
   return (
