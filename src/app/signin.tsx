@@ -72,7 +72,7 @@ const SignIn = () => {
     try {
       const response = await signIn(username, password);
       login(response.accessToken);
-      setAccountUser(response.user);
+      setAccountUser(response);
       showToast("Signed in successfully", { variant: "default" });
       router.replace("/(app)/(recipes)");
     } catch (err) {

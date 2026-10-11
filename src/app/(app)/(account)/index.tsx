@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -9,11 +9,11 @@ import { Card, StepperInput, Text } from "@/components/atoms";
 import { BuildVersion } from "@/components/molecules";
 import { AccountsRow } from "@/components/templates/AccountsRow";
 import { formatCapitalized, getInitials } from "@/helpers";
-import { useRole } from "@/hooks";
+import { useRole, useTeamMembers } from "@/hooks";
 import { useAuth } from "@/provider/AuthProvider";
 import { signOut } from "@/service/api";
 import { useAccountUserStore } from "@/store";
-import { ApiError, Currency, MembershipRole, UnitSystem } from "@/types";
+import { ApiError, Currency, UnitSystem } from "@/types";
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
@@ -23,10 +23,10 @@ export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
   const { canInteract } = useRole();
+  const { teamMembersCount } = useTeamMembers();
 
   const business = useAccountUserStore((state) => state.business);
   const user = useAccountUserStore((state) => state.user);
-  const teamMembers = useAccountUserStore((state) => state.teamMembers);
 
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
@@ -57,13 +57,6 @@ export default function SettingsScreen() {
       { text: "Sign out", onPress: onSignOut },
     ]);
   };
-
-  const teamMemberText = useMemo(() => {
-    const membersOnly = teamMembers.filter(
-      (member) => member.role !== MembershipRole.OWNER,
-    );
-    return (membersOnly?.length ?? 0) + " members";
-  }, [teamMembers]);
 
   return (
     <View
@@ -133,7 +126,7 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <AccountsRow
               label="Team"
-              value={teamMemberText}
+              value={`${teamMembersCount} members`}
               onPress={() => router.push("/teams")}
             />
           </Card>

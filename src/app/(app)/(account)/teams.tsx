@@ -19,11 +19,11 @@ import {
   ToggleButton,
 } from "@/components/atoms";
 import { INVITE_CODE_ROLE_OPTIONS } from "@/constants";
-import { useAccountUserStore } from "@/store";
-import { MembershipRole } from "@/types";
-
-const generateInviteCode = () =>
-  Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join("");
+import { formatRole, getInitials } from "@/helpers";
+import { useRole, useTeamMembers } from "@/hooks";
+import { generateCode } from "@/service/api";
+import { useAccountUserStore, useInvitationCodeStore } from "@/store";
+import { ApiError, MembershipRole } from "@/types";
 
 const InviteCodeDisplay = ({ code }: { code: string }) => {
   const digits = code.padEnd(6, " ").slice(0, 6).split("");
@@ -43,8 +43,18 @@ export default function TeamsScreen() {
   const insets = useSafeAreaInsets();
   const business = useAccountUserStore((state) => state.business);
   const businessName = business?.name ?? "your business";
+  const { teamMembers } = useTeamMembers();
+  const { isOwner } = useRole();
 
-  const [inviteCode, setInviteCode] = useState("482913");
+  const invitationCode = useInvitationCodeStore(
+    (state) => state.invitationCode,
+  );
+  const expiresAt = useInvitationCodeStore((state) => state.expiresAt);
+  const setExpiresAt = useInvitationCodeStore((state) => state.setExpiresAt);
+  const setInvitationCode = useInvitationCodeStore(
+    (state) => state.setInvitationCode,
+  );
+
   const [codeRole, setCodeRole] = useState<MembershipRole>(
     MembershipRole.STAFF,
   );
@@ -55,14 +65,41 @@ export default function TeamsScreen() {
     [businessName],
   );
 
+  const expiresAtMs = useMemo(() => {
+    if (!expiresAt) return null;
+    const date = expiresAt instanceof Date ? expiresAt : new Date(expiresAt);
+    const ms = date.getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }, [expiresAt]);
+
+  const isCodeExpired = expiresAtMs !== null && expiresAtMs <= Date.now();
+  const daysUntilExpiry =
+    expiresAtMs === null
+      ? null
+      : Math.ceil((expiresAtMs - Date.now()) / (1000 * 60 * 60 * 24));
+
   const handleCopyCode = async () => {
-    await Clipboard.setStringAsync(inviteCode);
+    await Clipboard.setStringAsync(invitationCode);
     showToast("Code copied", { variant: "default" });
   };
 
-  const handleGenerateCode = () => {
-    setInviteCode(generateInviteCode());
-    showToast("New invite code generated", { variant: "default" });
+  const handleGenerateCode = async () => {
+    try {
+      const response = await generateCode({
+        businessId: business?.id ?? "",
+        role: codeRole,
+        expiresInDays: 7,
+      });
+      setInvitationCode(response.code);
+      setExpiresAt(new Date(response.expiresAt));
+      showToast("New invite code generated", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unexpected error occurred", { variant: "error" });
+      }
+    }
   };
 
   return (
@@ -93,44 +130,100 @@ export default function TeamsScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Card>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Invite code</Text>
+            {isOwner ? (
+              <Card>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Invite code</Text>
+                  {expiresAtMs !== null ? (
+                    <Text
+                      variant="caption"
+                      color={isCodeExpired ? "error" : "textSecondary"}
+                    >
+                      {isCodeExpired
+                        ? "Code expired"
+                        : `Expires in ${daysUntilExpiry} days`}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <InviteCodeDisplay code={invitationCode} />
+
+                <ToggleButton
+                  options={INVITE_CODE_ROLE_OPTIONS}
+                  value={codeRole}
+                  onChange={(value) => setCodeRole(value as MembershipRole)}
+                />
+
+                <View style={styles.buttonRow}>
+                  <Button
+                    variant="outline"
+                    style={styles.halfButton}
+                    textStyle={styles.buttonText}
+                    onPress={handleCopyCode}
+                  >
+                    Copy code
+                  </Button>
+                  <Button
+                    style={styles.halfButton}
+                    textStyle={styles.buttonText}
+                    onPress={handleGenerateCode}
+                  >
+                    Generate new
+                  </Button>
+                </View>
+
                 <Text variant="caption" color="textSecondary">
-                  Expires in 7 days
+                  {codeHelpText}
                 </Text>
-              </View>
+              </Card>
+            ) : null}
 
-              <InviteCodeDisplay code={inviteCode} />
-
-              <ToggleButton
-                options={INVITE_CODE_ROLE_OPTIONS}
-                value={codeRole}
-                onChange={(value) => setCodeRole(value as MembershipRole)}
-              />
-
-              <View style={styles.buttonRow}>
-                <Button
-                  variant="outline"
-                  style={styles.halfButton}
-                  textStyle={styles.buttonText}
-                  onPress={handleCopyCode}
-                >
-                  Copy code
-                </Button>
-                <Button
-                  style={styles.halfButton}
-                  textStyle={styles.buttonText}
-                  onPress={handleGenerateCode}
-                >
-                  Generate new
-                </Button>
-              </View>
-
-              <Text variant="caption" color="textSecondary">
-                {codeHelpText}
+            <View style={styles.section}>
+              <Text
+                variant="caption"
+                color="textSecondary"
+                style={styles.sectionLabel}
+              >
+                Members
               </Text>
-            </Card>
+              <Card style={styles.listCard}>
+                {teamMembers.length === 0 ? (
+                  <View style={styles.emptyRow}>
+                    <Text variant="caption" color="textSecondary">
+                      No team members yet
+                    </Text>
+                  </View>
+                ) : (
+                  teamMembers.map((member, index) => (
+                    <View key={member.id}>
+                      {index > 0 ? <View style={styles.divider} /> : null}
+                      <View style={styles.memberRow}>
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarLabel}>
+                            {getInitials(member.fullName)}
+                          </Text>
+                        </View>
+                        <View style={styles.memberCopy}>
+                          <Text style={styles.memberName} numberOfLines={1}>
+                            {member.fullName}
+                          </Text>
+                          <Text
+                            variant="caption"
+                            color="textSecondary"
+                            numberOfLines={1}
+                          >
+                            {member.username}
+                          </Text>
+                        </View>
+                        <Text variant="caption" color="textSecondary">
+                          {formatRole(member.membership.role)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </Card>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
@@ -197,5 +290,53 @@ const styles = StyleSheet.create((theme) => ({
   },
   cancelButtonText: {
     color: theme.colors.text,
+  },
+  section: {
+    gap: theme.gap(1),
+  },
+  sectionLabel: {
+    paddingHorizontal: theme.gap(0.5),
+    fontFamily: theme.fontFamily.medium,
+  },
+  listCard: {
+    padding: 0,
+    gap: 0,
+    overflow: "hidden",
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(1.5),
+    paddingVertical: theme.gap(2),
+    paddingHorizontal: theme.gap(2.5),
+  },
+  avatar: {
+    width: theme.gap(5),
+    height: theme.gap(5),
+    borderRadius: 9999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.border,
+  },
+  avatarLabel: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.semiBold,
+    color: theme.colors.text,
+  },
+  memberCopy: {
+    flex: 1,
+    gap: theme.gap(0.25),
+  },
+  memberName: {
+    fontFamily: theme.fontFamily.semiBold,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginLeft: theme.gap(2.5),
+  },
+  emptyRow: {
+    paddingVertical: theme.gap(2),
+    paddingHorizontal: theme.gap(2.5),
   },
 }));

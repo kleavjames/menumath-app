@@ -37,11 +37,17 @@ export const PinCode = ({
   const inputRef = useRef<RNTextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
 
-  const digits = value.replace(/\D/g, "").slice(0, length);
-  const activeIndex = Math.min(digits.length, length - 1);
+  const characters = value
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, length);
+  const activeIndex = Math.min(characters.length, length - 1);
 
   const handleChange = (next: string) => {
-    const sanitized = next.replace(/\D/g, "").slice(0, length);
+    const sanitized = next
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, length);
     onChange(sanitized);
 
     if (sanitized.length === length) {
@@ -61,14 +67,16 @@ export const PinCode = ({
     >
       <UniTextInput
         ref={inputRef}
-        value={digits}
+        value={characters}
         onChangeText={handleChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         autoFocus={autoFocus}
-        keyboardType="number-pad"
-        textContentType="oneTimeCode"
-        autoComplete="sms-otp"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        keyboardType="default"
+        textContentType="none"
+        autoComplete="off"
         maxLength={length}
         caretHidden
         style={styles.hiddenInput}
@@ -76,7 +84,7 @@ export const PinCode = ({
 
       {Array.from({ length }, (_, index) => {
         const isActive = isFocused && !error && index === activeIndex;
-        const digit = digits[index] ?? "";
+        const character = characters[index] ?? "";
 
         return (
           <View
@@ -87,7 +95,7 @@ export const PinCode = ({
               error && styles.cellError,
             ]}
           >
-            <Text style={styles.digit}>{digit}</Text>
+            <Text style={styles.digit}>{character}</Text>
           </View>
         );
       })}

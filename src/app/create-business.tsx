@@ -22,7 +22,7 @@ import { BackButton, SelectInput, TextInput } from "@/components/molecules";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS } from "@/constants";
 import { useAuth } from "@/provider/AuthProvider";
 import { signUp } from "@/service/api";
-import { useCreateAccountStore } from "@/store";
+import { useAccountUserStore, useCreateAccountStore } from "@/store";
 import { ApiError, BusinessType, Currency } from "@/types";
 import { router } from "expo-router";
 
@@ -48,6 +48,7 @@ const CreateBusiness = () => {
   const fullName = useCreateAccountStore((state) => state.fullName);
   const username = useCreateAccountStore((state) => state.username);
   const password = useCreateAccountStore((state) => state.password);
+  const setAccountUser = useAccountUserStore((state) => state.setAccountUser);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -89,6 +90,7 @@ const CreateBusiness = () => {
       });
 
       login(response.accessToken);
+      setAccountUser(response);
       showToast("Business created successfully", { variant: "default" });
       router.push("/(app)/(recipes)");
     } catch (error) {

@@ -9,9 +9,11 @@ import {
 } from "@/types";
 import client from "./client";
 
-interface SignInResponse {
+export interface AuthResponse {
   accessToken: string;
   user: User;
+  membership: Membership;
+  business: Business;
 }
 
 interface SignUpPayload {
@@ -26,15 +28,8 @@ interface SignUpPayload {
   };
 }
 
-interface SignUpResponse {
-  accessToken: string;
-  user: User;
-  business: Business;
-  memberships: Membership;
-}
-
 export const signIn = async (username: string, password: string) => {
-  const response = await client.post<SignInResponse | ApiErrorPayload>(
+  const response = await client.post<AuthResponse | ApiErrorPayload>(
     "/auth/sign-in",
     {
       username,
@@ -47,11 +42,11 @@ export const signIn = async (username: string, password: string) => {
     throw new ApiError(payload);
   }
 
-  return response.data as SignInResponse;
+  return response.data as AuthResponse;
 };
 
 export const signUp = async (payload: SignUpPayload) => {
-  const response = await client.post<SignUpResponse | ApiErrorPayload>(
+  const response = await client.post<AuthResponse | ApiErrorPayload>(
     "/auth/sign-up",
     payload,
   );
@@ -61,7 +56,7 @@ export const signUp = async (payload: SignUpPayload) => {
     throw new ApiError(payload);
   }
 
-  return response.data as SignUpResponse;
+  return response.data as AuthResponse;
 };
 
 export const signOut = async () => {
