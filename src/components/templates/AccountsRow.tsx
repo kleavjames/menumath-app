@@ -43,7 +43,6 @@ export const AccountsRow = ({
             name={{
               ios: "chevron.right",
               android: "chevron_right",
-              web: "chevron_right",
             }}
             size={16}
           />

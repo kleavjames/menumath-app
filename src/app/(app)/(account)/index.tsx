@@ -8,9 +8,11 @@ import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { Card, StepperInput, Text } from "@/components/atoms";
 import { BuildVersion } from "@/components/molecules";
 import { AccountsRow } from "@/components/templates/AccountsRow";
+import { formatCapitalized, getInitials } from "@/helpers/format";
 import { useAuth } from "@/provider/AuthProvider";
 import { signOut } from "@/service/api/auth";
 import { useAccountUserStore } from "@/store/accountUser";
+import { Currency, UnitSystem } from "@/types/business";
 import { ApiError } from "@/types/common";
 import { MembershipRole } from "@/types/user";
 
@@ -23,13 +25,16 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const business = useAccountUserStore((state) => state.business);
+  const user = useAccountUserStore((state) => state.user);
   const teamMembers = useAccountUserStore((state) => state.teamMembers);
 
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
 
-  const [targetFoodCost, setTargetFoodCost] = useState(30);
+  const [targetFoodCost, setTargetFoodCost] = useState(
+    Number(business?.targetFoodCost ?? 40),
+  );
 
   const onSignOut = async () => {
     try {
@@ -89,12 +94,14 @@ export default function SettingsScreen() {
             onPress={() => router.push("/profile")}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>J</Text>
+              <Text style={styles.avatarLabel}>
+                {getInitials(user?.fullName ?? "")}
+              </Text>
             </View>
             <View style={styles.profileCopy}>
-              <Text style={styles.profileName}>jamesada</Text>
+              <Text style={styles.profileName}>{user?.fullName}</Text>
               <Text variant="caption" color="textSecondary">
-                test@gmail.com
+                {user?.username}
               </Text>
             </View>
             <UniChevron
@@ -142,15 +149,13 @@ export default function SettingsScreen() {
           <Card style={styles.listCard}>
             <AccountsRow
               label="Currency"
-              value="USD · $"
-              onPress={() => {
-                // TODO: change currency
-              }}
+              value={business?.currency ?? Currency.USD}
+              onPress={() => router.push("/currency")}
             />
             <View style={styles.divider} />
             <AccountsRow
               label="Units"
-              value="Metric"
+              value={formatCapitalized(business?.unitSystem ?? UnitSystem.BOTH)}
               onPress={() => {
                 // TODO: change units
               }}

@@ -12,26 +12,12 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Card, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
+import { formatRole, getInitials } from "@/helpers/format";
 import { useAccountUserStore } from "@/store/accountUser";
-import { MembershipRole } from "@/types/user";
 
 type FieldErrors = {
   fullName?: string;
   username?: string;
-};
-
-const getInitials = (name: string) => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-};
-
-const formatRole = (role?: MembershipRole | null) => {
-  if (!role) return "—";
-  return `${role.charAt(0)}${role.slice(1).toLowerCase()}`;
 };
 
 export default function ProfileScreen() {
