@@ -22,7 +22,7 @@ const UniChevron = withUnistyles(SymbolView, (theme) => ({
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const { canInteract } = useRole();
+  const { canInteract, isOwner } = useRole();
   const { teamMembersCount } = useTeamMembers();
 
   const business = useAccountUserStore((state) => state.business);
@@ -122,7 +122,7 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
-              disabled={!canInteract}
+              disabled={!isOwner}
               label="Business"
               value={business?.name ?? "No business"}
               onPress={() => router.push("/business")}

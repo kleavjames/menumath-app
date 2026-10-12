@@ -11,6 +11,10 @@ const TAB_BAR_HIDDEN_SEGMENTS = new Set([
   "teams",
 ]);
 
+export const unstable_settings = {
+  initialRouteName: "(recipes)",
+};
+
 export default function AppLayout() {
   const { theme } = useUnistyles();
   const { token } = useAuth();
@@ -25,13 +29,13 @@ export default function AppLayout() {
 
   return (
     <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
-      <NativeTabs.Trigger name="(ingredients)">
-        <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(recipes)">
         <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(ingredients)">
+        <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(account)">
         <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>

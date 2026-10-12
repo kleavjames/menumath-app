@@ -1,12 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
@@ -156,7 +150,7 @@ const SignIn = () => {
                   textContentType="password"
                   error={errors.password}
                 />
-                <Pressable
+                {/* <Pressable
                   accessibilityRole="link"
                   hitSlop={8}
                   style={styles.forgotPassword}
@@ -165,7 +159,7 @@ const SignIn = () => {
                   <Text variant="label" color="textSecondary">
                     Forgot password?
                   </Text>
-                </Pressable>
+                </Pressable> */}
               </View>
             </View>
 

@@ -44,7 +44,7 @@ export default function TeamsScreen() {
   const business = useAccountUserStore((state) => state.business);
   const businessName = business?.name ?? "your business";
   const { teamMembers } = useTeamMembers();
-  const { isOwner } = useRole();
+  const { isOwner, canInteract } = useRole();
 
   const invitationCode = useInvitationCodeStore(
     (state) => state.invitationCode,
@@ -102,6 +102,15 @@ export default function TeamsScreen() {
     }
   };
 
+  const inviteOptions = useMemo(() => {
+    if (isOwner) {
+      return INVITE_CODE_ROLE_OPTIONS;
+    }
+    return INVITE_CODE_ROLE_OPTIONS.filter(
+      (option) => option.value === MembershipRole.STAFF,
+    );
+  }, []);
+
   return (
     <>
       <Stack.Screen
@@ -130,7 +139,7 @@ export default function TeamsScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {isOwner ? (
+            {canInteract ? (
               <Card>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Invite code</Text>
@@ -149,7 +158,7 @@ export default function TeamsScreen() {
                 <InviteCodeDisplay code={invitationCode} />
 
                 <ToggleButton
-                  options={INVITE_CODE_ROLE_OPTIONS}
+                  options={inviteOptions}
                   value={codeRole}
                   onChange={(value) => setCodeRole(value as MembershipRole)}
                 />
