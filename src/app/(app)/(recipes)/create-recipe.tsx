@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
 import { Pill, showToast, StepperInput, Text } from "@/components/atoms";
-import { PrefixInput, TextInput } from "@/components/molecules";
+import { Checkbox, PrefixInput, TextInput } from "@/components/molecules";
 import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
 import {
   MethodStep,
@@ -21,6 +21,7 @@ import {
 import { CURRENCY_SYMBOLS } from "@/constants";
 import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers";
 import {
+  createIngredient,
   createRecipe,
   getCategories,
   getRecipe,
@@ -31,6 +32,7 @@ import {
   ApiError,
   CategoryType,
   Currency,
+  MetricUnit,
   RecipeIngredientPayload,
   RecipeStep,
 } from "@/types";
@@ -84,6 +86,7 @@ export default function CreateRecipeScreen() {
   const [price, setPrice] = useState(0);
   const [ingredients, setIngredients] = useState<RecipeIngredientPayload[]>([]);
   const [methodSteps, setMethodSteps] = useState<MethodStep[]>([]);
+  const [addToIngredient, setAddToIngredient] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -197,6 +200,42 @@ export default function CreateRecipeScreen() {
     return Object.keys(next).length === 0;
   };
 
+  const saveIngredientFromRecipe = async () => {
+    try {
+      const ingredientCategories = await getCategories(
+        businessId!,
+        CategoryType.INGREDIENT,
+      );
+      const ingredientCategoryId = ingredientCategories[0]?.id;
+
+      if (!ingredientCategoryId) {
+        throw new ApiError({
+          message: "Add an ingredient category before saving to ingredients",
+          error: "missing_ingredient_category",
+          statusCode: 400,
+        });
+      }
+
+      await createIngredient({
+        businessId: businessId!,
+        name: name,
+        categoryId: ingredientCategoryId,
+        supplier: "",
+        itemSize: 1,
+        itemSizeUnit: MetricUnit.EACH,
+        itemPrice: costPerServing,
+        usableCostPerItem: costPerServing,
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unexpected error occurred", { variant: "error" });
+      }
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
 
@@ -224,6 +263,25 @@ export default function CreateRecipeScreen() {
           businessId: businessId!,
           ...payload,
         });
+
+        if (addToIngredient) {
+          try {
+            await saveIngredientFromRecipe();
+          } catch (ingredientError) {
+            if (ingredientError instanceof ApiError) {
+              showToast(`Recipe saved. ${ingredientError.message}`, {
+                variant: "error",
+              });
+            } else {
+              showToast("Recipe saved, but could not add ingredient", {
+                variant: "error",
+              });
+            }
+            router.push("/(app)/(recipes)");
+            return;
+          }
+        }
+
         showToast("Recipe created successfully", { variant: "default" });
       }
       router.push("/(app)/(recipes)");
@@ -327,6 +385,14 @@ export default function CreateRecipeScreen() {
                 />
               </View>
             </View>
+
+            {!isEditing ? (
+              <Checkbox
+                label="Add to ingredient"
+                value={addToIngredient}
+                onValueChange={setAddToIngredient}
+              />
+            ) : null}
 
             <RecipeIngredient
               businessId={businessId}
