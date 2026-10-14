@@ -14,6 +14,7 @@ interface UserBusinessState {
 
 interface AccountUserState extends UserBusinessState {
   setAccountUser: (user: AuthResponse) => void;
+  setUpdatedBusiness: (business: Business) => void;
   setUpdatedUser: (user: User) => void;
   clearAccountUser: () => void;
 }
@@ -31,6 +32,7 @@ export const useAccountUserStore = create<AccountUserState>()(
     (set) => ({
       ...initialState,
       setUpdatedUser: (user) => set({ user }),
+      setUpdatedBusiness: (business) => set({ business }),
       setAccountUser: (account) => {
         const { membership, business, user } = account;
 

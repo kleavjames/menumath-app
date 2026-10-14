@@ -10,11 +10,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Pill, Text } from "@/components/atoms";
+import { Pill, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
 import { BUSINESS_TYPE_OPTIONS } from "@/constants";
+import { updateBusiness } from "@/service/api";
 import { useAccountUserStore } from "@/store";
-import { BusinessType } from "@/types";
+import { ApiError, BusinessType } from "@/types";
 
 type FieldErrors = {
   businessName?: string;
@@ -23,7 +24,12 @@ type FieldErrors = {
 
 export default function BusinessScreen() {
   const insets = useSafeAreaInsets();
+
   const business = useAccountUserStore((state) => state.business);
+  const businessId = useAccountUserStore((state) => state.businessId);
+  const setUpdatedBusiness = useAccountUserStore(
+    (state) => state.setUpdatedBusiness,
+  );
 
   const [businessName, setBusinessName] = useState(business?.name ?? "");
   const [businessType, setBusinessType] = useState<BusinessType>(
@@ -54,9 +60,24 @@ export default function BusinessScreen() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    router.back();
+    try {
+      const response = await updateBusiness(businessId!, {
+        name: businessName,
+        type: businessType,
+      });
+      setUpdatedBusiness(response);
+      setBusinessName(response.name);
+      showToast("Business updated successfully");
+      router.back();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
   };
 
   return (
@@ -93,7 +114,7 @@ export default function BusinessScreen() {
             showsVerticalScrollIndicator={false}
           >
             <TextInput
-              label="Business name"
+              variant="ghost"
               value={businessName}
               onChangeText={(value) => {
                 setBusinessName(value);

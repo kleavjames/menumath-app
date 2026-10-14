@@ -41,7 +41,7 @@ const CreateBusiness = () => {
   );
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState<Currency>(Currency.USD);
-  const [targetFoodCost, setTargetFoodCost] = useState(30);
+  const [targetFoodCost, setTargetFoodCost] = useState(60);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 

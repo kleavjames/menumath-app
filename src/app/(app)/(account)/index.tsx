@@ -1,19 +1,21 @@
 import { router } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, StepperInput, Text } from "@/components/atoms";
+import { Card, showToast, StepperInput, Text } from "@/components/atoms";
 import { BuildVersion } from "@/components/molecules";
 import { AccountsRow } from "@/components/templates/AccountsRow";
 import { formatCapitalized, getInitials } from "@/helpers";
-import { useRole, useTeamMembers } from "@/hooks";
+import { useDebounce, useRole, useTeamMembers } from "@/hooks";
 import { useAuth } from "@/provider/AuthProvider";
-import { signOut } from "@/service/api";
+import { signOut, updateBusiness } from "@/service/api";
 import { useAccountUserStore, useInvitationCodeStore } from "@/store";
 import { ApiError, Currency, UnitSystem } from "@/types";
+
+const TARGET_FOOD_COST_DEBOUNCE_MS = 1000;
 
 const UniChevron = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
@@ -22,12 +24,15 @@ const UniChevron = withUnistyles(SymbolView, (theme) => ({
 export default function SettingsScreen() {
   const { logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const { canInteract } = useRole();
+  const { canInteract, isOwner } = useRole();
   const { teamMembersCount } = useTeamMembers();
 
   const business = useAccountUserStore((state) => state.business);
+  const businessId = useAccountUserStore((state) => state.businessId);
   const user = useAccountUserStore((state) => state.user);
-
+  const setUpdatedBusiness = useAccountUserStore(
+    (state) => state.setUpdatedBusiness,
+  );
   const clearAccountUser = useAccountUserStore(
     (state) => state.clearAccountUser,
   );
@@ -38,6 +43,43 @@ export default function SettingsScreen() {
   const [targetFoodCost, setTargetFoodCost] = useState(
     Number(business?.targetFoodCost ?? 40),
   );
+
+  const debouncedTargetFoodCost = useDebounce(
+    targetFoodCost,
+    TARGET_FOOD_COST_DEBOUNCE_MS,
+  );
+
+  const handleUpdateTargetFoodCost = useCallback(async () => {
+    try {
+      const response = await updateBusiness(businessId!, {
+        targetFoodCost: debouncedTargetFoodCost,
+      });
+      setUpdatedBusiness(response);
+      setTargetFoodCost(Number(response.targetFoodCost));
+      showToast("Target food cost updated successfully");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
+  }, [debouncedTargetFoodCost, businessId, canInteract]);
+
+  useEffect(() => {
+    const savedTargetFoodCost = Number(business?.targetFoodCost ?? 40);
+    if (debouncedTargetFoodCost === savedTargetFoodCost) return;
+    if (!businessId || !canInteract) return;
+
+    (async () => {
+      await handleUpdateTargetFoodCost();
+    })();
+  }, [
+    debouncedTargetFoodCost,
+    business?.targetFoodCost,
+    businessId,
+    canInteract,
+  ]);
 
   const onSignOut = async () => {
     try {
@@ -105,7 +147,6 @@ export default function SettingsScreen() {
               name={{
                 ios: "chevron.right",
                 android: "chevron_right",
-                web: "chevron_right",
               }}
               size={16}
             />
@@ -122,7 +163,7 @@ export default function SettingsScreen() {
           </Text>
           <Card style={styles.listCard}>
             <AccountsRow
-              disabled={!canInteract}
+              disabled={!isOwner}
               label="Business"
               value={business?.name ?? "No business"}
               onPress={() => router.push("/business")}
@@ -168,8 +209,8 @@ export default function SettingsScreen() {
                 <StepperInput
                   value={targetFoodCost}
                   onChange={setTargetFoodCost}
-                  min={1}
-                  max={100}
+                  min={20}
+                  max={80}
                   disabled={!canInteract}
                   suffix="%"
                 />

@@ -133,13 +133,6 @@ export const RecipeIngredient = ({
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Ingredients</Text>
-          <Text variant="label" color="textSecondary">
-            Batch{" "}
-            <Text style={styles.batchValue}>
-              {symbol}
-              {formatPrice(batchCost)}
-            </Text>
-          </Text>
         </View>
 
         {ingredients.length === 0 ? (

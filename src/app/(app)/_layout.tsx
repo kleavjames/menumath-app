@@ -1,6 +1,6 @@
 import { useAuth } from "@/provider/AuthProvider";
-import { Redirect, useSegments } from "expo-router";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import LucideIcon from "@react-native-vector-icons/lucide";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import { useUnistyles } from "react-native-unistyles";
 
 const TAB_BAR_HIDDEN_SEGMENTS = new Set([
@@ -10,6 +10,10 @@ const TAB_BAR_HIDDEN_SEGMENTS = new Set([
   "business",
   "teams",
 ]);
+
+export const unstable_settings = {
+  initialRouteName: "(recipes)",
+};
 
 export default function AppLayout() {
   const { theme } = useUnistyles();
@@ -24,22 +28,42 @@ export default function AppLayout() {
   }
 
   return (
-    <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
-      <NativeTabs.Trigger name="(ingredients)">
-        <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(recipes)">
-        <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(account)">
-        <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf="person.text.rectangle"
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarStyle: hideTabBar ? { display: "none" } : undefined,
+      }}
+    >
+      <Tabs.Screen
+        name="(recipes)"
+        options={{
+          headerShown: false,
+          title: "Recipes",
+          tabBarIcon: ({ color }) => (
+            <LucideIcon name="fork-knife" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="(ingredients)"
+        options={{
+          headerShown: false,
+          title: "Ingredients",
+          tabBarIcon: ({ color }) => (
+            <LucideIcon name="shopping-cart" size={20} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="(account)"
+        options={{
+          headerShown: false,
+          title: "Account",
+          tabBarIcon: ({ color }) => (
+            <LucideIcon name="user" size={20} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }

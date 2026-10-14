@@ -3,20 +3,42 @@ import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Card, Text } from "@/components/atoms";
+import { Card, showToast, Text } from "@/components/atoms";
 import { CURRENCIES } from "@/constants";
+import { updateBusiness } from "@/service/api";
 import { useAccountUserStore } from "@/store";
-import { Currency } from "@/types";
+import { ApiError, Currency } from "@/types";
+import { useState } from "react";
 
 export default function CurrencyScreen() {
   const insets = useSafeAreaInsets();
+
   const business = useAccountUserStore((state) => state.business);
+  const businessId = useAccountUserStore((state) => state.businessId);
+  const setUpdatedBusiness = useAccountUserStore(
+    (state) => state.setUpdatedBusiness,
+  );
 
-  const selectedCurrency = business?.currency ?? Currency.USD;
+  const [currentCurrency, setCurrentCurrency] = useState<Currency>(
+    business?.currency ?? Currency.USD,
+  );
 
-  // TODO: update business currency
-  const handleSelect = (currency: Currency) => {
-    if (currency === selectedCurrency) return;
+  const saveCurrency = async () => {
+    try {
+      const response = await updateBusiness(businessId!, {
+        currency: currentCurrency,
+      });
+      setUpdatedBusiness(response);
+      setCurrentCurrency(response.currency);
+      showToast("Currency updated successfully");
+      router.back();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
   };
 
   return (
@@ -28,6 +50,15 @@ export default function CurrencyScreen() {
           headerLeft: () => (
             <Pressable onPressIn={router.back} style={styles.headerButton}>
               <Text style={styles.backButtonText}>Back</Text>
+            </Pressable>
+          ),
+          headerRight: () => (
+            <Pressable
+              disabled={currentCurrency === business?.currency}
+              style={styles.headerButton}
+              onPress={saveCurrency}
+            >
+              <Text>Save</Text>
             </Pressable>
           ),
         }}
@@ -44,7 +75,7 @@ export default function CurrencyScreen() {
         >
           <Card style={styles.listCard}>
             {CURRENCIES.map((currency, index) => {
-              const isSelected = currency.value === selectedCurrency;
+              const isSelected = currency.value === currentCurrency;
 
               return (
                 <View key={currency.value}>
@@ -57,7 +88,11 @@ export default function CurrencyScreen() {
                       styles.row,
                       pressed && styles.rowPressed,
                     ]}
-                    onPress={() => handleSelect(currency.value)}
+                    onPress={() => {
+                      if (currency.value !== currentCurrency) {
+                        setCurrentCurrency(currency.value);
+                      }
+                    }}
                   >
                     <Text
                       color={isSelected ? "primary" : "text"}
