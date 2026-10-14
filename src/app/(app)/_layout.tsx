@@ -1,5 +1,5 @@
 import { useAuth } from "@/provider/AuthProvider";
-import { Redirect, Stack, useSegments } from "expo-router";
+import { Icon, Redirect, Tabs, useSegments } from "expo-router";
 import { useUnistyles } from "react-native-unistyles";
 
 const TAB_BAR_HIDDEN_SEGMENTS = new Set([
@@ -27,20 +27,36 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen
+    <Tabs screenOptions={{ tabBarActiveTintColor: theme.colors.primary }}>
+      <Tabs.Screen
         name="(recipes)"
-        options={{ headerShown: false, title: "Recipes" }}
+        options={{
+          headerShown: false,
+          title: "Recipes",
+          tabBarIcon: ({ color }) => (
+            <Icon sf="fork.knife" renderingMode="template" />
+          ),
+        }}
       />
-      <Stack.Screen
+      <Tabs.Screen
         name="(ingredients)"
-        options={{ headerShown: false, title: "Ingredients" }}
+        options={{
+          headerShown: false,
+          title: "Ingredients",
+          tabBarIcon: () => <Icon sf="menucard" renderingMode="template" />,
+        }}
       />
-      <Stack.Screen
+      <Tabs.Screen
         name="(account)"
-        options={{ headerShown: false, title: "Account" }}
+        options={{
+          headerShown: false,
+          title: "Account",
+          tabBarIcon: () => (
+            <Icon sf="person.text.rectangle" renderingMode="template" />
+          ),
+        }}
       />
-    </Stack>
+    </Tabs>
   );
 
   // return (

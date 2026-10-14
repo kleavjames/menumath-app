@@ -58,6 +58,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-image",
       "expo-status-bar",
       "expo-web-browser",
+      "@react-native-vector-icons/lucide",
     ],
     experiments: {
       typedRoutes: true,
