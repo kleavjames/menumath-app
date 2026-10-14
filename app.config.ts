@@ -1,52 +1,74 @@
 import { ConfigContext, ExpoConfig } from "expo/config";
+import { version } from "./package.json";
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
-  ...config,
-  name: "menumath",
-  slug: "menumath",
-  version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/images/icon.png",
-  scheme: "menumathapp",
-  userInterfaceStyle: "automatic",
-  ios: {
-    bundleIdentifier: "com.kleavantjames.menumath",
-    icon: "./assets/expo.icon",
-  },
-  android: {
-    package: "com.kleavantjames.menumath",
-    adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
-      foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png",
-    },
-    predictiveBackGestureEnabled: false,
-  },
-  web: {
-    output: "static",
-    favicon: "./assets/images/favicon.png",
-  },
-  plugins: [
-    "expo-router",
-    [
-      "expo-splash-screen",
-      {
-        backgroundColor: "#208AEF",
-        android: {
-          image: "./assets/images/splash-icon.png",
-          imageWidth: 76,
-        },
+const getPlatformAppVersion = (): string => {
+  const platform = process.env.EAS_BUILD_PLATFORM;
+  const iosVersion = process.env.APP_VERSION_IOS;
+  const androidVersion = process.env.APP_VERSION_ANDROID;
+
+  if (platform === "ios" && iosVersion) return iosVersion;
+  if (platform === "android" && androidVersion) return androidVersion;
+
+  return version;
+};
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const appVersion = getPlatformAppVersion();
+
+  return {
+    ...config,
+    name: "MenuMath",
+    slug: "menumath",
+    version: appVersion,
+    orientation: "portrait",
+    icon: "./assets/images/menumath-icon-1024.png",
+    scheme: "menumathapp",
+    userInterfaceStyle: "automatic",
+    ios: {
+      bundleIdentifier: "com.kleavantjames.menumath",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
       },
-    ],
-  ],
-  experiments: {
-    typedRoutes: true,
-    reactCompiler: true,
-  },
-  extra: {
-    eas: {
-      projectId: "d8501ffb-feef-43e3-a2fd-b613ea1b885c",
     },
-  },
-});
+    android: {
+      package: "com.kleavantjames.menumath",
+      adaptiveIcon: {
+        backgroundColor: "#E6F4FE",
+        foregroundImage: "./assets/images/menumath-foreground.png",
+        backgroundImage: "./assets/images/menumath-background.png",
+        monochromeImage: "./assets/images/menumath-monochrome.png",
+      },
+      predictiveBackGestureEnabled: false,
+    },
+    plugins: [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: "#000000",
+          image: "./assets/images/menumath-foreground.png",
+          imageWidth: 200,
+          android: {
+            image: "./assets/images/menumath-foreground.png",
+            imageWidth: 200,
+          },
+        },
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser",
+      "@react-native-vector-icons/lucide",
+    ],
+    experiments: {
+      typedRoutes: true,
+      reactCompiler: true,
+    },
+    runtimeVersion: version,
+    extra: {
+      eas: {
+        projectId: "d8501ffb-feef-43e3-a2fd-b613ea1b885c",
+      },
+    },
+  };
+};

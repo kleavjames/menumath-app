@@ -1,0 +1,14 @@
+import { Stack } from "expo-router";
+
+export default function AccountLayout() {
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" />
+      <Stack.Screen name="business" />
+      <Stack.Screen name="teams" />
+      <Stack.Screen name="currency" />
+      <Stack.Screen name="unitSystem" />
+    </Stack>
+  );
+}
