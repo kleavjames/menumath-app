@@ -1,6 +1,5 @@
 import { useAuth } from "@/provider/AuthProvider";
-import { Redirect, useSegments } from "expo-router";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Redirect, Stack, useSegments } from "expo-router";
 import { useUnistyles } from "react-native-unistyles";
 
 const TAB_BAR_HIDDEN_SEGMENTS = new Set([
@@ -28,22 +27,39 @@ export default function AppLayout() {
   }
 
   return (
-    <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
-      <NativeTabs.Trigger name="(recipes)">
-        <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(ingredients)">
-        <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(account)">
-        <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf="person.text.rectangle"
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Stack>
+      <Stack.Screen
+        name="(recipes)"
+        options={{ headerShown: false, title: "Recipes" }}
+      />
+      <Stack.Screen
+        name="(ingredients)"
+        options={{ headerShown: false, title: "Ingredients" }}
+      />
+      <Stack.Screen
+        name="(account)"
+        options={{ headerShown: false, title: "Account" }}
+      />
+    </Stack>
   );
+
+  // return (
+  //   <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
+  //     <NativeTabs.Trigger name="(recipes)">
+  //       <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
+  //       <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
+  //     </NativeTabs.Trigger>
+  //     <NativeTabs.Trigger name="(ingredients)">
+  //       <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
+  //       <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
+  //     </NativeTabs.Trigger>
+  //     <NativeTabs.Trigger name="(account)">
+  //       <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
+  //       <NativeTabs.Trigger.Icon
+  //         sf="person.text.rectangle"
+  //         renderingMode="template"
+  //       />
+  //     </NativeTabs.Trigger>
+  //   </NativeTabs>
+  // );
 }
