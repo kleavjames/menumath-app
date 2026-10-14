@@ -1,5 +1,6 @@
 import { useAuth } from "@/provider/AuthProvider";
-import { Icon, Redirect, Tabs, useSegments } from "expo-router";
+import LucideIcon from "@react-native-vector-icons/lucide";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import { useUnistyles } from "react-native-unistyles";
 
 const TAB_BAR_HIDDEN_SEGMENTS = new Set([
@@ -27,14 +28,19 @@ export default function AppLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: theme.colors.primary }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarStyle: hideTabBar ? { display: "none" } : undefined,
+      }}
+    >
       <Tabs.Screen
         name="(recipes)"
         options={{
           headerShown: false,
           title: "Recipes",
           tabBarIcon: ({ color }) => (
-            <Icon sf="fork.knife" renderingMode="template" />
+            <LucideIcon name="fork-knife" size={20} color={color} />
           ),
         }}
       />
@@ -43,7 +49,9 @@ export default function AppLayout() {
         options={{
           headerShown: false,
           title: "Ingredients",
-          tabBarIcon: () => <Icon sf="menucard" renderingMode="template" />,
+          tabBarIcon: ({ color }) => (
+            <LucideIcon name="shopping-cart" size={20} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -51,31 +59,11 @@ export default function AppLayout() {
         options={{
           headerShown: false,
           title: "Account",
-          tabBarIcon: () => (
-            <Icon sf="person.text.rectangle" renderingMode="template" />
+          tabBarIcon: ({ color }) => (
+            <LucideIcon name="user" size={20} color={color} />
           ),
         }}
       />
     </Tabs>
   );
-
-  // return (
-  //   <NativeTabs hidden={hideTabBar} tintColor={theme.colors.primary}>
-  //     <NativeTabs.Trigger name="(recipes)">
-  //       <NativeTabs.Trigger.Label>Recipes</NativeTabs.Trigger.Label>
-  //       <NativeTabs.Trigger.Icon sf="fork.knife" renderingMode="template" />
-  //     </NativeTabs.Trigger>
-  //     <NativeTabs.Trigger name="(ingredients)">
-  //       <NativeTabs.Trigger.Label>Ingredients</NativeTabs.Trigger.Label>
-  //       <NativeTabs.Trigger.Icon sf="menucard" renderingMode="template" />
-  //     </NativeTabs.Trigger>
-  //     <NativeTabs.Trigger name="(account)">
-  //       <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
-  //       <NativeTabs.Trigger.Icon
-  //         sf="person.text.rectangle"
-  //         renderingMode="template"
-  //       />
-  //     </NativeTabs.Trigger>
-  //   </NativeTabs>
-  // );
 }
