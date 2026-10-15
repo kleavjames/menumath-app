@@ -172,10 +172,14 @@ const SignIn = () => {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <Text variant="label" color="textSecondary" style={styles.footer}>
+        <Text
+          variant="body"
+          color="textSecondary"
+          style={styles.footer(insets.bottom)}
+        >
           New to MenuMath?{" "}
           <Text
-            variant="label"
+            variant="body"
             style={styles.link}
             onPress={() => router.push("/signup")}
           >
@@ -238,9 +242,10 @@ const styles = StyleSheet.create((theme) => ({
   forgotPassword: {
     alignSelf: "flex-end",
   },
-  footer: {
+  footer: (inset: number) => ({
     textAlign: "center",
-  },
+    marginBottom: inset,
+  }),
   link: {
     textDecorationLine: "underline",
     fontFamily: theme.fontFamily.semiBold,

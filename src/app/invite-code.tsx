@@ -86,11 +86,11 @@ const InviteCode = () => {
             />
           </View>
 
-          <View style={styles.footer}>
+          <View style={styles.footer(insets.bottom)}>
             <Button onPress={handleJoinTeam} disabled={code.length !== 6}>
               Join team
             </Button>
-            <Text variant="label" color="textSecondary" style={styles.help}>
+            <Text variant="body" color="textSecondary" style={styles.help}>
               No code? Ask your manager to resend your invitation.
             </Text>
           </View>
@@ -123,10 +123,11 @@ const styles = StyleSheet.create((theme) => ({
   pinSection: {
     gap: theme.gap(1.5),
   },
-  footer: {
+  footer: (inset: number) => ({
     marginTop: "auto",
     gap: theme.gap(2.5),
-  },
+    marginBottom: inset,
+  }),
   help: {
     textAlign: "center",
     lineHeight: 20,
