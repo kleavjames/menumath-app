@@ -12,6 +12,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Pill, showToast, StepperInput, Text } from "@/components/atoms";
 import { Checkbox, PrefixInput, TextInput } from "@/components/molecules";
+import { RecipeSummary } from "@/components/organisms";
 import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
 import {
   MethodStep,
@@ -19,7 +20,7 @@ import {
 } from "@/components/templates/RecipeMethods";
 
 import { CURRENCY_SYMBOLS } from "@/constants";
-import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers";
+import { roundTo2, toNumber } from "@/helpers";
 import {
   createIngredient,
   createRecipe,
@@ -43,14 +44,6 @@ type FieldErrors = {
   name?: string;
   price?: string;
   ingredients?: string;
-};
-
-type CostStatus = "good" | "warn" | "over";
-
-const getCostStatus = (percent: number, target: number): CostStatus => {
-  if (percent <= target) return "good";
-  if (percent <= target + 5) return "warn";
-  return "over";
 };
 
 const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
@@ -173,8 +166,6 @@ export default function CreateRecipeScreen() {
       hasPrice,
     };
   }, [batchCost, servings, price]);
-
-  const status = getCostStatus(recipeCost, targetFoodCost);
 
   const handleIngredientsChange = (next: RecipeIngredientPayload[]) => {
     setIngredients(next);
@@ -409,63 +400,15 @@ export default function CreateRecipeScreen() {
             <RecipeMethods steps={methodSteps} onChange={setMethodSteps} />
           </ScrollView>
 
-          <View style={styles.summary(insets.bottom + 16)}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Text variant="caption" color="textSecondary">
-                  Cost / serving
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {symbol}
-                  {formatPrice(costPerServing)}
-                </Text>
-              </View>
-              <View style={[styles.summaryItem, styles.summaryItemCenter]}>
-                <Text variant="caption" color="textSecondary">
-                  Food cost
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {hasPrice ? `${recipeCost.toFixed(2)}%` : "—"}
-                </Text>
-              </View>
-              <View style={[styles.summaryItem, styles.summaryItemRight]}>
-                <Text variant="caption" color="textSecondary">
-                  Profit / serving
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {hasPrice
-                    ? `${profitPerServing < 0 ? "-" : ""}${symbol}${formatPrice(Math.abs(profitPerServing))}`
-                    : "—"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.track}>
-              <View
-                style={[
-                  styles.fill,
-                  status === "good" && styles.fillGood,
-                  status === "warn" && styles.fillWarn,
-                  status === "over" && styles.fillOver,
-                  { width: `${Math.min(recipeCost, 100)}%` },
-                ]}
-              />
-              <View
-                style={[
-                  styles.targetMarker,
-                  { left: `${Math.min(targetFoodCost, 100)}%` },
-                ]}
-              />
-            </View>
-            <View style={styles.trackLabels}>
-              <Text variant="caption" color="textSecondary">
-                0%
-              </Text>
-              <Text variant="caption" color="textSecondary">
-                Target {formatAmount(targetFoodCost, 1)}%
-              </Text>
-            </View>
-          </View>
+          <RecipeSummary
+            symbol={symbol}
+            costPerServing={costPerServing}
+            recipeCost={recipeCost}
+            profitPerServing={profitPerServing}
+            hasPrice={hasPrice}
+            targetFoodCost={targetFoodCost}
+            bottomInset={insets.bottom + 16}
+          />
         </KeyboardAvoidingView>
       </View>
     </>
@@ -515,64 +458,5 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: "stretch",
     justifyContent: "space-between",
     paddingVertical: theme.gap(1.5),
-  },
-  summary: (bottom: number) => ({
-    gap: theme.gap(1),
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingHorizontal: theme.gap(3),
-    paddingTop: theme.gap(2),
-    paddingBottom: bottom,
-  }),
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  summaryItem: {
-    flex: 1,
-    gap: theme.gap(0.5),
-  },
-  summaryItemCenter: {
-    alignItems: "center",
-  },
-  summaryItemRight: {
-    alignItems: "flex-end",
-  },
-  summaryValue: {
-    fontSize: theme.fontSize.lg,
-    fontFamily: theme.fontFamily.semiBold,
-    color: theme.colors.text,
-  },
-  track: {
-    height: 6,
-    borderRadius: 9999,
-    backgroundColor: theme.colors.surface,
-    justifyContent: "center",
-  },
-  fill: {
-    height: 6,
-    borderRadius: 9999,
-  },
-  fillGood: {
-    backgroundColor: "#2F8F55",
-  },
-  fillWarn: {
-    backgroundColor: theme.colors.secondary,
-  },
-  fillOver: {
-    backgroundColor: theme.colors.error,
-  },
-  targetMarker: {
-    position: "absolute",
-    width: 2,
-    height: 14,
-    marginLeft: -1,
-    borderRadius: 1,
-    backgroundColor: theme.colors.text,
-  },
-  trackLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
 }));
