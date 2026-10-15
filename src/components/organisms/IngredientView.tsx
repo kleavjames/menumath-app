@@ -5,22 +5,27 @@ import {
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useMemo, type Ref } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState, type Ref } from "react";
+import {
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Text } from "@/components/atoms";
-import { BigInfoCard } from "@/components/templates";
+import { Card, Pill, Text } from "@/components/atoms";
 import { METRIC_OPTIONS } from "@/constants";
 import {
+  costUnitLabel,
   formatAmount,
-  formatPackSize,
   formatPrice,
+  getCalculationSupplier,
   toNumber,
   unitLabel,
 } from "@/helpers";
-import { Ingredient } from "@/types";
+import { Ingredient, Supplier } from "@/types";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.text,
@@ -52,12 +57,31 @@ const DetailRow = ({ label, value, withDivider }: DetailRowProps) => (
     {withDivider ? <View style={styles.divider} /> : null}
     <View style={styles.detailRow}>
       <Text color="textSecondary">{label}</Text>
-      <Text style={styles.detailValue} numberOfLines={1}>
+      <Text style={styles.detailValue} numberOfLines={2}>
         {value}
       </Text>
     </View>
   </View>
 );
+
+const supplierDisplayName = (supplier: Supplier, index: number) =>
+  supplier.name.trim() || `Supplier ${index + 1}`;
+
+const formatSupplierPackSize = (supplier: Supplier) =>
+  `${formatAmount(toNumber(supplier.itemSize))} ${unitLabel(supplier.itemSizeUnit)}`;
+
+/** Mirrors create-ingredient usable cost breakdown for a single supplier. */
+const formatSupplierUsableCost = (supplier: Supplier, symbol: string) => {
+  const option = METRIC_OPTIONS.find((o) => o.value === supplier.itemSizeUnit);
+  const stored = toNumber(supplier.usableCostPerItem);
+  const subUnit = option?.subUnit;
+  const perUnit = subUnit ? stored * subUnit.perUnit : stored;
+
+  const primary = `${symbol}${formatPrice(perUnit)} per ${unitLabel(supplier.itemSizeUnit)}`;
+  if (!subUnit) return primary;
+
+  return `${primary} · ${symbol}${formatAmount(stored)} per ${unitLabel(subUnit.label)}`;
+};
 
 export const IngredientView = ({
   ref,
@@ -71,8 +95,29 @@ export const IngredientView = ({
 }: IngredientViewProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(
+    null,
+  );
 
-  // Dynamic sizing adds a content-height snap (index 0); 90% is the expanded snap.
+  useEffect(() => {
+    if (!ingredient) {
+      setSelectedSupplierId(null);
+      return;
+    }
+
+    const defaultSupplier = getCalculationSupplier(ingredient);
+    setSelectedSupplierId(defaultSupplier?.id ?? null);
+  }, [ingredient?.id, ingredient?.calculationSupplierId]);
+
+  const selectedSupplier = useMemo(() => {
+    if (!ingredient) return undefined;
+    return (
+      ingredient.suppliers.find(
+        (supplier) => supplier.id === selectedSupplierId,
+      ) ?? getCalculationSupplier(ingredient)
+    );
+  }, [ingredient, selectedSupplierId]);
+
   const snapPoints = useMemo(() => ["90%"], []);
   const maxDynamicContentSize = useMemo(
     () => windowHeight * 0.9,
@@ -91,26 +136,6 @@ export const IngredientView = ({
     [],
   );
 
-  // `usableCostPerItem` is stored per sub unit (e.g. g) when the unit has one,
-  // otherwise per unit — mirror the breakdown shown on the create screen.
-  const renderCost = (item: Ingredient) => {
-    const option = METRIC_OPTIONS.find((o) => o.value === item.itemSizeUnit);
-    const stored = toNumber(item.usableCostPerItem);
-    const subUnit = option?.subUnit;
-
-    const perUnit = subUnit ? stored * subUnit.perUnit : stored;
-
-    return {
-      label: `Usable cost per ${unitLabel(item.itemSizeUnit)}`,
-      value: `${symbol}${formatPrice(perUnit)}`,
-      subValue: subUnit
-        ? `${symbol}${formatAmount(stored)} per ${unitLabel(subUnit.label)}`
-        : undefined,
-    };
-  };
-
-  const cost = ingredient ? renderCost(ingredient) : null;
-
   return (
     <BottomSheetModal
       ref={ref}
@@ -125,7 +150,7 @@ export const IngredientView = ({
       <BottomSheetView
         style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
       >
-        {ingredient && cost ? (
+        {ingredient ? (
           <>
             <View style={styles.header}>
               <View style={styles.headerCopy}>
@@ -173,25 +198,62 @@ export const IngredientView = ({
               ) : null}
             </View>
 
-            <BigInfoCard
-              label={cost.label}
-              value={cost.value}
-              subValue={cost.subValue}
-            />
+            {ingredient.suppliers.length > 0 ? (
+              <>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+                  contentContainerStyle={styles.supplierPills}
+                >
+                  {ingredient.suppliers.map((supplier, index) => (
+                    <Pill
+                      key={supplier.id}
+                      selected={selectedSupplierId === supplier.id}
+                      onPress={() => setSelectedSupplierId(supplier.id)}
+                    >
+                      {supplierDisplayName(supplier, index)}
+                    </Pill>
+                  ))}
+                </ScrollView>
 
-            <Card style={styles.detailsCard}>
-              <DetailRow label="Supplier" value={ingredient.supplier || "—"} />
-              <DetailRow
-                label="Pack size"
-                value={formatPackSize(ingredient)}
-                withDivider
-              />
-              <DetailRow
-                label="Pack price"
-                value={`${symbol}${formatPrice(toNumber(ingredient.itemPrice))}`}
-                withDivider
-              />
-            </Card>
+                {selectedSupplier ? (
+                  <Card style={styles.detailsCard}>
+                    <DetailRow
+                      label="Supplier"
+                      value={supplierDisplayName(
+                        selectedSupplier,
+                        Math.max(
+                          0,
+                          ingredient.suppliers.findIndex(
+                            (item) => item.id === selectedSupplier.id,
+                          ),
+                        ),
+                      )}
+                    />
+                    <DetailRow
+                      label="Pack size"
+                      value={formatSupplierPackSize(selectedSupplier)}
+                      withDivider
+                    />
+                    <DetailRow
+                      label="Pack price"
+                      value={`${symbol}${formatPrice(toNumber(selectedSupplier.itemPrice))}`}
+                      withDivider
+                    />
+                    <DetailRow
+                      label={`Usable cost per ${costUnitLabel(selectedSupplier.itemSizeUnit)}`}
+                      value={formatSupplierUsableCost(selectedSupplier, symbol)}
+                      withDivider
+                    />
+                  </Card>
+                ) : null}
+              </>
+            ) : (
+              <Text variant="caption" color="textSecondary">
+                No suppliers for this ingredient.
+              </Text>
+            )}
           </>
         ) : null}
       </BottomSheetView>
@@ -232,6 +294,11 @@ const styles = StyleSheet.create((theme) => ({
   actionButtonPressed: {
     opacity: 0.7,
   },
+  supplierPills: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(1),
+  },
   detailsCard: {
     padding: 0,
     gap: 0,
@@ -247,6 +314,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   detailValue: {
     flexShrink: 1,
+    textAlign: "right",
     fontFamily: theme.fontFamily.medium,
   },
   divider: {

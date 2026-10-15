@@ -220,11 +220,15 @@ export default function CreateRecipeScreen() {
         businessId: businessId!,
         name: name,
         categoryId: ingredientCategoryId,
-        supplier: "",
-        itemSize: 1,
-        itemSizeUnit: MetricUnit.EACH,
-        itemPrice: costPerServing,
-        usableCostPerItem: costPerServing,
+        suppliers: [
+          {
+            name: "",
+            itemSize: 1,
+            itemSizeUnit: MetricUnit.EACH,
+            itemPrice: costPerServing,
+            usableCostPerItem: costPerServing,
+          },
+        ],
       });
     } catch (error) {
       if (error instanceof ApiError) {

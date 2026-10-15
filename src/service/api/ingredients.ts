@@ -7,15 +7,20 @@ import {
 } from "@/types";
 import client from "./client";
 
-export interface CreateIngredientPayload {
+export interface SupplierPayload {
   name: string;
-  businessId: string;
-  categoryId: string;
-  supplier: string;
   itemSize: number;
   itemSizeUnit: MetricUnit;
   itemPrice: number;
   usableCostPerItem: number;
+}
+
+export interface CreateIngredientPayload {
+  name: string;
+  businessId: string;
+  categoryId: string;
+  suppliers: SupplierPayload[];
+  calculationSupplierId?: string;
 }
 
 export const createIngredient = async (payload: CreateIngredientPayload) => {

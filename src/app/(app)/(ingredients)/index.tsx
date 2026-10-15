@@ -17,7 +17,12 @@ import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories, IngredientView } from "@/components/organisms";
 import { CURRENCY_SYMBOLS } from "@/constants";
-import { formatPackPrice, formatPackSize, formatUnitCost } from "@/helpers";
+import {
+  formatPackPrice,
+  formatPackSize,
+  formatUnitCost,
+  getCalculationSupplier,
+} from "@/helpers";
 import { useKeyboard, useRole } from "@/hooks";
 import {
   createCategory,
@@ -142,8 +147,10 @@ export default function IngredientsScreen() {
       const matchesQuery =
         !normalizedQuery ||
         ingredient.name.toLowerCase().includes(normalizedQuery) ||
-        ingredient.supplier.toLowerCase().includes(normalizedQuery) ||
-        categoryName.toLowerCase().includes(normalizedQuery);
+        categoryName.toLowerCase().includes(normalizedQuery) ||
+        ingredient.suppliers.some((supplier) =>
+          supplier.name.toLowerCase().includes(normalizedQuery),
+        );
 
       return matchesCategory && matchesQuery;
     });
@@ -157,16 +164,18 @@ export default function IngredientsScreen() {
 
   const handleEditIngredient = (ingredient: Ingredient) => {
     ingredientSheetRef.current?.dismiss();
+    const calculationSupplier = getCalculationSupplier(ingredient);
     router.push({
       pathname: "/create-ingredient",
       params: {
         id: ingredient.id,
         name: ingredient.name,
         categoryId: ingredient.categoryId,
-        supplier: ingredient.supplier ?? "",
-        itemSize: ingredient.itemSize,
-        itemSizeUnit: ingredient.itemSizeUnit,
-        itemPrice: ingredient.itemPrice,
+        supplier: calculationSupplier?.name ?? "",
+        itemSize: calculationSupplier?.itemSize,
+        itemSizeUnit: calculationSupplier?.itemSizeUnit,
+        itemPrice: calculationSupplier?.itemPrice,
+        calculationSupplierId: ingredient.calculationSupplierId,
       },
     });
   };
@@ -353,35 +362,41 @@ export default function IngredientsScreen() {
                   : "No ingredients match your search."}
               </Text>
             ) : (
-              filteredIngredients.map((ingredient, index) => (
-                <View key={ingredient.id}>
-                  {index > 0 ? <View style={styles.divider} /> : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.rowPressed,
-                    ]}
-                    onPress={() => handleOpenIngredient(ingredient)}
-                  >
-                    <View style={styles.rowLeft}>
-                      <Text style={styles.itemName}>{ingredient.name}</Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatPackSize(ingredient)}
-                        {ingredient.supplier ? ` · ${ingredient.supplier}` : ""}
-                      </Text>
-                    </View>
-                    <View style={styles.rowRight}>
-                      <Text style={styles.unitCost}>
-                        {formatPackPrice(ingredient, symbol)}
-                      </Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatUnitCost(ingredient, symbol)}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-              ))
+              filteredIngredients.map((ingredient, index) => {
+                const calculationSupplier = getCalculationSupplier(ingredient);
+
+                return (
+                  <View key={ingredient.id}>
+                    {index > 0 ? <View style={styles.divider} /> : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.row,
+                        pressed && styles.rowPressed,
+                      ]}
+                      onPress={() => handleOpenIngredient(ingredient)}
+                    >
+                      <View style={styles.rowLeft}>
+                        <Text style={styles.itemName}>{ingredient.name}</Text>
+                        <Text variant="caption" color="textSecondary">
+                          {formatPackSize(ingredient)}
+                          {calculationSupplier?.name
+                            ? ` · ${calculationSupplier.name}`
+                            : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.rowRight}>
+                        <Text style={styles.unitCost}>
+                          {formatPackPrice(ingredient, symbol)}
+                        </Text>
+                        <Text variant="caption" color="textSecondary">
+                          {formatUnitCost(ingredient, symbol)}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })
             )}
           </Card>
         </View>
