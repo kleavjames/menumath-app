@@ -41,7 +41,7 @@ export default function SettingsScreen() {
   );
 
   const [targetFoodCost, setTargetFoodCost] = useState(
-    Number(business?.targetFoodCost ?? 40),
+    Number(business?.targetFoodCost ?? 50),
   );
 
   const debouncedTargetFoodCost = useDebounce(
@@ -67,7 +67,7 @@ export default function SettingsScreen() {
   }, [debouncedTargetFoodCost, businessId, canInteract]);
 
   useEffect(() => {
-    const savedTargetFoodCost = Number(business?.targetFoodCost ?? 40);
+    const savedTargetFoodCost = Number(business?.targetFoodCost ?? 50);
     if (debouncedTargetFoodCost === savedTargetFoodCost) return;
     if (!businessId || !canInteract) return;
 

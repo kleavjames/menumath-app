@@ -70,6 +70,12 @@ export const RecipeView = ({
   );
   const snapPoints = useMemo(() => [sheetHeight], [sheetHeight]);
 
+  const renderTabButtons = useMemo(() => {
+    if (hideButtons)
+      return RECIPE_VIEW_TABS.filter((tab) => tab.value !== "ingredients");
+    return RECIPE_VIEW_TABS;
+  }, [hideButtons]);
+
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -167,7 +173,7 @@ export const RecipeView = ({
             </View>
           </View>
 
-          <ButtonGroupView tabs={[...RECIPE_VIEW_TABS]} style={styles.tabs}>
+          <ButtonGroupView tabs={[...renderTabButtons]} style={styles.tabs}>
             <BottomSheetScrollView
               contentContainerStyle={[
                 styles.tabContent,

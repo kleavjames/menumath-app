@@ -2,7 +2,14 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -57,6 +64,7 @@ export default function IngredientsScreen() {
   const [category, setCategory] = useState("All");
   const [selectedIngredient, setSelectedIngredient] =
     useState<Ingredient | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
 
   const initCategories = useCallback(async (bId: string) => {
@@ -96,6 +104,19 @@ export default function IngredientsScreen() {
       initIngredients(businessId);
     }, [businessId, initCategories, initIngredients]),
   );
+
+  const handleRefresh = useCallback(async () => {
+    if (!businessId) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        initCategories(businessId),
+        initIngredients(businessId),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [businessId, initCategories, initIngredients]);
 
   const selectedCategory = useMemo(
     () =>
@@ -254,29 +275,33 @@ export default function IngredientsScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={Keyboard.dismiss}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+          />
+        }
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text variant="hero" style={styles.headline}>
               Ingredients
             </Text>
-            {canInteract ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="New ingredient"
-                style={({ pressed }) => [
-                  styles.newButton,
-                  pressed && styles.newButtonPressed,
-                ]}
-                onPress={() => router.push("/create-ingredient")}
-              >
-                <UniSymbol
-                  name={{ ios: "plus", android: "add", web: "add" }}
-                  size={14}
-                />
-                <Text style={styles.newButtonLabel}>New</Text>
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="New ingredient"
+              style={({ pressed }) => [
+                styles.newButton,
+                pressed && styles.newButtonPressed,
+              ]}
+              onPress={() => router.push("/create-ingredient")}
+            >
+              <UniSymbol
+                name={{ ios: "plus", android: "add", web: "add" }}
+                size={14}
+              />
+              <Text style={styles.newButtonLabel}>New</Text>
+            </Pressable>
           </View>
           <Text color="textSecondary" variant="label">
             {ingredients.length} items · prices in {currency}

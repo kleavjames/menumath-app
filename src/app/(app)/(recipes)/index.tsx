@@ -3,7 +3,14 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -68,6 +75,7 @@ export default function RecipesScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [category, setCategory] = useState(ALL_CATEGORY.name);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const recipeSheetRef = useRef<BottomSheetModal>(null);
   const shouldPresentRecipeSheetRef = useRef(false);
 
@@ -79,9 +87,9 @@ export default function RecipesScreen() {
       );
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(error.message);
+        showToast(error.message, { variant: "error" });
       } else {
-        console.error(error);
+        showToast("An unexpected error occurred", { variant: "error" });
       }
     }
   }, []);
@@ -102,10 +110,20 @@ export default function RecipesScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!businessId) return;
-      void initCategories(businessId);
-      void initRecipes(businessId);
+      initCategories(businessId);
+      initRecipes(businessId);
     }, [businessId, initCategories, initRecipes]),
   );
+
+  const handleRefresh = useCallback(async () => {
+    if (!businessId) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([initCategories(businessId), initRecipes(businessId)]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [businessId, initCategories, initRecipes]);
 
   const selectedCategory = useMemo(
     () =>
@@ -280,6 +298,9 @@ export default function RecipesScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={Keyboard.dismiss}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
