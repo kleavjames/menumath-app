@@ -51,6 +51,17 @@ export const getRecipe = async (id: string) => {
   return parseRecipe(response.data as Recipe);
 };
 
+export const getRecipeById = async (id: string) => {
+  const response = await client.get<Recipe | ApiErrorPayload>(`/recipes/${id}`);
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return parseRecipe(response.data as Recipe);
+};
+
 export const updateRecipe = async (
   id: string,
   payload: UpdateRecipePayload,

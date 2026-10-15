@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Pill, showToast, StepperInput, Text } from "@/components/atoms";
+import { Loader, Pill, showToast, StepperInput, Text } from "@/components/atoms";
 import { Checkbox, PrefixInput, TextInput } from "@/components/molecules";
 import { RecipeSummary } from "@/components/organisms";
 import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
@@ -25,7 +25,7 @@ import {
   createIngredient,
   createRecipe,
   getCategories,
-  getRecipe,
+  getRecipeById,
   updateRecipe,
 } from "@/service/api";
 import { useAccountUserStore } from "@/store";
@@ -46,6 +46,9 @@ type FieldErrors = {
   ingredients?: string;
 };
 
+const readRouteParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+
 const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
   steps
     .map((step, index) => ({
@@ -57,7 +60,7 @@ const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
 export default function CreateRecipeScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const recipeId = typeof id === "string" ? id : undefined;
+  const recipeId = readRouteParam(id);
   const isEditing = Boolean(recipeId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
@@ -81,6 +84,7 @@ export default function CreateRecipeScreen() {
   const [methodSteps, setMethodSteps] = useState<MethodStep[]>([]);
   const [addToIngredient, setAddToIngredient] = useState(false);
   const [isMethodFocused, setIsMethodFocused] = useState(false);
+  const [isFetching, setIsFetching] = useState(isEditing);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -98,8 +102,13 @@ export default function CreateRecipeScreen() {
   useEffect(() => {
     if (!recipeId) return;
 
-    getRecipe(recipeId)
+    let cancelled = false;
+    setIsFetching(true);
+
+    getRecipeById(recipeId)
       .then((recipe) => {
+        if (cancelled) return;
+
         setName(recipe.name);
         setCategoryId(recipe.categoryId);
         setServings(recipe.servings);
@@ -119,12 +128,21 @@ export default function CreateRecipeScreen() {
         );
       })
       .catch((error) => {
+        if (cancelled) return;
         if (error instanceof ApiError) {
           showToast(error.message, { variant: "error" });
         } else {
           showToast("Could not load recipe", { variant: "error" });
         }
+        router.back();
+      })
+      .finally(() => {
+        if (!cancelled) setIsFetching(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [recipeId]);
 
   const clearError = (field: keyof FieldErrors) => {
@@ -302,12 +320,17 @@ export default function CreateRecipeScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPressIn={handleSave} style={styles.headerButton}>
+            <Pressable
+              onPressIn={handleSave}
+              style={styles.headerButton}
+              disabled={isFetching}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </Pressable>
           ),
         }}
       />
+      <Loader visible={isFetching} text="Loading recipe..." />
 
       <View style={[styles.screen, { paddingTop: insets.top * 2 }]}>
         <KeyboardAvoidingView
