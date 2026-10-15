@@ -286,7 +286,7 @@ const styles = StyleSheet.create((theme) => ({
   footer: (inset: number) => ({
     textAlign: "center",
     lineHeight: 20,
-    marginBottom: inset,
+    paddingBottom: inset,
   }),
   link: {
     fontFamily: theme.fontFamily.semiBold,

@@ -177,7 +177,7 @@ const styles = StyleSheet.create((theme) => ({
   footer: (inset: number) => ({
     textAlign: "center",
     lineHeight: 18,
-    marginBottom: inset,
+    paddingBottom: inset,
   }),
   link: {
     textDecorationLine: "underline",

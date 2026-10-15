@@ -27,7 +27,6 @@ const SignIn = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -71,9 +70,9 @@ const SignIn = () => {
       router.replace("/(app)/(recipes)");
     } catch (err) {
       if (err instanceof ApiError) {
-        setErrorMessage(err.message);
+        showToast(err.message, { variant: "error" });
       } else {
-        setErrorMessage("An unexpected error occurred");
+        showToast("An unexpected error occurred", { variant: "error" });
       }
     } finally {
       setIsLoading(false);
@@ -164,11 +163,6 @@ const SignIn = () => {
             </View>
 
             <Button onPress={handleSignIn}>Sign in</Button>
-            {errorMessage && (
-              <Text variant="label" color="error" style={styles.errorText}>
-                {errorMessage}
-              </Text>
-            )}
           </ScrollView>
         </KeyboardAvoidingView>
 
@@ -244,7 +238,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   footer: (inset: number) => ({
     textAlign: "center",
-    marginBottom: inset,
+    paddingBottom: inset,
   }),
   link: {
     textDecorationLine: "underline",

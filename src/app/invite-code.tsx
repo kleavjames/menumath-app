@@ -126,7 +126,7 @@ const styles = StyleSheet.create((theme) => ({
   footer: (inset: number) => ({
     marginTop: "auto",
     gap: theme.gap(2.5),
-    marginBottom: inset,
+    paddingBottom: inset,
   }),
   help: {
     textAlign: "center",
