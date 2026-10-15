@@ -13,7 +13,6 @@ export interface SupplierPayload {
   itemSize: number;
   itemSizeUnit: MetricUnit;
   itemPrice: number;
-  usableCostPerItem: number;
 }
 
 export interface CreateIngredientPayload {

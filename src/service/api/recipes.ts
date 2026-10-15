@@ -14,10 +14,6 @@ export interface CreateRecipePayload {
   name: string;
   servings: number;
   pricePerServing: number;
-  costPerServing: number;
-  recipeCost: number;
-  profit: number;
-  margin: number;
   ingredients: RecipeIngredientPayload[];
   steps: RecipeStep[];
 }

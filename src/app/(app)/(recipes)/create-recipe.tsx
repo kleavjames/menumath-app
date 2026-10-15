@@ -10,7 +10,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Loader, Pill, showToast, StepperInput, Text } from "@/components/atoms";
+import {
+  Loader,
+  Pill,
+  showToast,
+  StepperInput,
+  Text,
+} from "@/components/atoms";
 import { Checkbox, PrefixInput, TextInput } from "@/components/molecules";
 import { RecipeSummary } from "@/components/organisms";
 import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
@@ -236,7 +242,6 @@ export default function CreateRecipeScreen() {
             itemSize: 1,
             itemSizeUnit: MetricUnit.EACH,
             itemPrice: costPerServing,
-            usableCostPerItem: costPerServing,
           },
         ],
       });
@@ -261,10 +266,6 @@ export default function CreateRecipeScreen() {
         name,
         servings,
         pricePerServing: price,
-        costPerServing,
-        recipeCost,
-        profit: profitPerServing,
-        margin: marginProfit,
         ingredients,
         steps,
       };

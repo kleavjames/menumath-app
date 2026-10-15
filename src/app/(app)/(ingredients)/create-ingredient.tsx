@@ -131,7 +131,6 @@ const toSupplierPayload = (row: SupplierRow): SupplierPayload => {
     itemSize: toNumber(row.packSize),
     itemSizeUnit: row.unit,
     itemPrice: toNumber(row.packPrice),
-    usableCostPerItem: perSubUnit ?? perUnit,
   };
 };
 
