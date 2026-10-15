@@ -164,19 +164,9 @@ export default function IngredientsScreen() {
 
   const handleEditIngredient = (ingredient: Ingredient) => {
     ingredientSheetRef.current?.dismiss();
-    const calculationSupplier = getCalculationSupplier(ingredient);
     router.push({
       pathname: "/create-ingredient",
-      params: {
-        id: ingredient.id,
-        name: ingredient.name,
-        categoryId: ingredient.categoryId,
-        supplier: calculationSupplier?.name ?? "",
-        itemSize: calculationSupplier?.itemSize,
-        itemSizeUnit: calculationSupplier?.itemSizeUnit,
-        itemPrice: calculationSupplier?.itemPrice,
-        calculationSupplierId: ingredient.calculationSupplierId,
-      },
+      params: { id: ingredient.id },
     });
   };
 

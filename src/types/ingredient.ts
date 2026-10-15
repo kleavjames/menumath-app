@@ -6,6 +6,7 @@ export interface Ingredient {
   categoryId: string;
   name: string;
   calculationSupplierId: string;
+  calculationSupplier: Supplier;
   suppliers: Supplier[];
   createdAt: string;
   updatedAt: string;

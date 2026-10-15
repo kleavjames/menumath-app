@@ -22,11 +22,18 @@ import { formatAmount, formatPrice, toNumber } from "@/helpers";
 import {
   createIngredient,
   getCategories,
+  getIngredientById,
   updateIngredient,
 } from "@/service/api";
 import type { SupplierPayload } from "@/service/api/ingredients";
 import { useAccountUserStore } from "@/store";
-import { ApiError, CategoryType, Currency, MetricUnit } from "@/types";
+import {
+  ApiError,
+  CategoryType,
+  Currency,
+  MetricUnit,
+  Supplier,
+} from "@/types";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.text,
@@ -38,6 +45,7 @@ const UniDangerSymbol = withUnistyles(SymbolView, (theme) => ({
 
 type SupplierRow = {
   id: string;
+  serverId?: string;
   name: string;
   packSize: string;
   unit: MetricUnit;
@@ -54,15 +62,8 @@ type FieldErrors = {
   suppliers?: Record<string, SupplierFieldErrors>;
 };
 
-type EditParams = {
+type RouteParams = {
   id?: string;
-  name?: string;
-  categoryId?: string;
-  supplier?: string;
-  itemSize?: string;
-  itemSizeUnit?: string;
-  itemPrice?: string;
-  calculationSupplierId?: string;
 };
 
 const readRouteParam = (value: string | string[] | undefined) =>
@@ -85,14 +86,14 @@ const createSupplierRow = (
   ...overrides,
 });
 
-const buildInitialSuppliers = (params: EditParams): SupplierRow[] => [
-  createSupplierRow({
-    name: params.supplier ?? "",
-    packSize: toInputValue(params.itemSize, "1"),
-    unit: (params.itemSizeUnit as MetricUnit | undefined) ?? MetricUnit.KG,
-    packPrice: toInputValue(params.itemPrice, ""),
-  }),
-];
+const supplierToRow = (supplier: Supplier): SupplierRow => ({
+  id: supplier.id,
+  serverId: supplier.id,
+  name: supplier.name,
+  packSize: toInputValue(supplier.itemSize, "1"),
+  unit: supplier.itemSizeUnit,
+  packPrice: toInputValue(supplier.itemPrice, ""),
+});
 
 const computeUsableCost = (
   packSize: string,
@@ -125,6 +126,7 @@ const toSupplierPayload = (row: SupplierRow): SupplierPayload => {
   );
 
   return {
+    ...(row.serverId ? { id: row.serverId } : {}),
     name: row.name.trim(),
     itemSize: toNumber(row.packSize),
     itemSizeUnit: row.unit,
@@ -135,8 +137,8 @@ const toSupplierPayload = (row: SupplierRow): SupplierPayload => {
 
 export default function CreateIngredientScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<EditParams>();
-  const ingredientId = params.id;
+  const params = useLocalSearchParams<RouteParams>();
+  const ingredientId = readRouteParam(params.id);
   const isEditing = Boolean(ingredientId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
@@ -146,18 +148,19 @@ export default function CreateIngredientScreen() {
 
   const symbol = CURRENCY_SYMBOLS[currency];
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState(params.name ?? "");
-  const [categoryId, setCategoryId] = useState<string | undefined>(
-    params.categoryId,
-  );
+  const [isFetching, setIsFetching] = useState(isEditing);
+  const [isSaving, setIsSaving] = useState(false);
+  const [name, setName] = useState("");
+  const [categoryId, setCategoryId] = useState<string | undefined>();
   const [categoryOptions, setCategoryOptions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [suppliers, setSuppliers] = useState<SupplierRow[]>(() =>
-    buildInitialSuppliers(params),
-  );
-  const calculationSupplierId = readRouteParam(params.calculationSupplierId);
+  const [suppliers, setSuppliers] = useState<SupplierRow[]>(() => [
+    createSupplierRow(),
+  ]);
+  const [calculationSupplierId, setCalculationSupplierId] = useState<
+    string | undefined
+  >();
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -171,6 +174,43 @@ export default function CreateIngredientScreen() {
       )
       .catch((error) => console.error(error));
   }, [businessId]);
+
+  useEffect(() => {
+    if (!ingredientId) return;
+
+    let cancelled = false;
+
+    setIsFetching(true);
+    getIngredientById(ingredientId)
+      .then((ingredient) => {
+        if (cancelled) return;
+
+        setName(ingredient.name);
+        setCategoryId(ingredient.categoryId);
+        setCalculationSupplierId(ingredient.calculationSupplierId);
+        setSuppliers(
+          ingredient.suppliers.length > 0
+            ? ingredient.suppliers.map(supplierToRow)
+            : [createSupplierRow()],
+        );
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          showToast(error.message, { variant: "error" });
+        } else {
+          showToast("Failed to load ingredient", { variant: "error" });
+        }
+        router.back();
+      })
+      .finally(() => {
+        if (!cancelled) setIsFetching(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ingredientId]);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -250,10 +290,27 @@ export default function CreateIngredientScreen() {
     setSuppliers((prev) => [...prev, createSupplierRow()]);
   };
 
+  const resolveSupplierReferenceId = (row: SupplierRow) =>
+    row.serverId ?? row.id;
+
   const removeSupplier = (id: string) => {
-    setSuppliers((prev) =>
-      prev.length <= 1 ? prev : prev.filter((row) => row.id !== id),
-    );
+    setSuppliers((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const removed = prev.find((row) => row.id === id);
+      const next = prev.filter((row) => row.id !== id);
+
+      if (removed) {
+        const removedRef = resolveSupplierReferenceId(removed);
+        setCalculationSupplierId((current) => {
+          if (current !== removedRef) return current;
+          const fallback = next[0];
+          return fallback ? resolveSupplierReferenceId(fallback) : undefined;
+        });
+      }
+
+      return next;
+    });
     setErrors((prev) => {
       if (!prev.suppliers?.[id]) return prev;
       const nextSuppliers = { ...prev.suppliers };
@@ -270,7 +327,7 @@ export default function CreateIngredientScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
       const supplierPayloads = suppliers.map(toSupplierPayload);
@@ -280,11 +337,25 @@ export default function CreateIngredientScreen() {
         suppliers: supplierPayloads,
       };
 
+      const activeCalculationId = (() => {
+        const matched = suppliers.find(
+          (row) => resolveSupplierReferenceId(row) === calculationSupplierId,
+        );
+        if (matched?.serverId) return matched.serverId;
+        if (
+          calculationSupplierId &&
+          suppliers.some((row) => row.serverId === calculationSupplierId)
+        ) {
+          return calculationSupplierId;
+        }
+        return suppliers.find((row) => row.serverId)?.serverId;
+      })();
+
       if (ingredientId) {
         await updateIngredient(ingredientId, {
           ...values,
-          ...(calculationSupplierId
-            ? { calculationSupplierId }
+          ...(activeCalculationId
+            ? { calculationSupplierId: activeCalculationId }
             : {}),
         });
       } else {
@@ -305,9 +376,11 @@ export default function CreateIngredientScreen() {
         showToast("An unknown error occurred", { variant: "error" });
       }
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
+
+  const isLoading = isFetching || isSaving;
 
   return (
     <>
@@ -321,7 +394,11 @@ export default function CreateIngredientScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPressIn={handleSave} style={styles.saveButton}>
+            <Pressable
+              onPressIn={handleSave}
+              style={styles.saveButton}
+              disabled={isFetching}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </Pressable>
           ),
@@ -329,7 +406,13 @@ export default function CreateIngredientScreen() {
       />
       <Loader
         visible={isLoading}
-        text={isEditing ? "Updating ingredient..." : "Creating ingredient..."}
+        text={
+          isFetching
+            ? "Loading ingredient..."
+            : isEditing
+              ? "Updating ingredient..."
+              : "Creating ingredient..."
+        }
       />
       <View
         style={[
@@ -356,6 +439,7 @@ export default function CreateIngredientScreen() {
               placeholder="Ingredient name"
               autoCapitalize="words"
               error={errors.name}
+              editable={!isFetching}
             />
 
             <View style={styles.form}>
@@ -371,6 +455,7 @@ export default function CreateIngredientScreen() {
                         key={value}
                         selected={categoryId === value}
                         onPress={() => setCategoryId(value)}
+                        disabled={isFetching}
                       >
                         {label}
                       </Pill>
@@ -405,6 +490,7 @@ export default function CreateIngredientScreen() {
                             accessibilityLabel={`Remove supplier ${index + 1}`}
                             hitSlop={8}
                             onPress={() => removeSupplier(row.id)}
+                            disabled={isFetching}
                           >
                             <UniDangerSymbol
                               name={{
@@ -426,6 +512,7 @@ export default function CreateIngredientScreen() {
                         }
                         placeholder="Optional"
                         autoCapitalize="words"
+                        editable={!isFetching}
                       />
 
                       <View style={styles.purchaseFields}>
@@ -482,6 +569,7 @@ export default function CreateIngredientScreen() {
                     pressed && styles.addButtonPressed,
                   ]}
                   onPress={addSupplier}
+                  disabled={isFetching}
                 >
                   <UniSymbol
                     name={{ ios: "plus", android: "add", web: "add" }}
