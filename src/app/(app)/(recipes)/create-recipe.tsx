@@ -80,6 +80,7 @@ export default function CreateRecipeScreen() {
   const [ingredients, setIngredients] = useState<RecipeIngredientPayload[]>([]);
   const [methodSteps, setMethodSteps] = useState<MethodStep[]>([]);
   const [addToIngredient, setAddToIngredient] = useState(false);
+  const [isMethodFocused, setIsMethodFocused] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -397,18 +398,24 @@ export default function CreateRecipeScreen() {
               error={errors.ingredients}
             />
 
-            <RecipeMethods steps={methodSteps} onChange={setMethodSteps} />
+            <RecipeMethods
+              steps={methodSteps}
+              onChange={setMethodSteps}
+              onEditingFocusChange={setIsMethodFocused}
+            />
           </ScrollView>
 
-          <RecipeSummary
-            symbol={symbol}
-            costPerServing={costPerServing}
-            recipeCost={recipeCost}
-            profitPerServing={profitPerServing}
-            hasPrice={hasPrice}
-            targetFoodCost={targetFoodCost}
-            bottomInset={insets.bottom + 16}
-          />
+          {!isMethodFocused ? (
+            <RecipeSummary
+              symbol={symbol}
+              costPerServing={costPerServing}
+              recipeCost={recipeCost}
+              profitPerServing={profitPerServing}
+              hasPrice={hasPrice}
+              targetFoodCost={targetFoodCost}
+              bottomInset={insets.bottom + 16}
+            />
+          ) : null}
         </KeyboardAvoidingView>
       </View>
     </>
