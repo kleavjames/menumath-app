@@ -162,6 +162,13 @@ export default function IngredientsScreen() {
     ingredientSheetRef.current?.present();
   };
 
+  const handleIngredientUpdated = (ingredient: Ingredient) => {
+    setIngredients((prev) =>
+      prev.map((item) => (item.id === ingredient.id ? ingredient : item)),
+    );
+    setSelectedIngredient(ingredient);
+  };
+
   const handleEditIngredient = (ingredient: Ingredient) => {
     ingredientSheetRef.current?.dismiss();
     router.push({
@@ -404,6 +411,7 @@ export default function IngredientsScreen() {
         symbol={symbol}
         onEdit={handleEditIngredient}
         onDelete={handleDeleteIngredient}
+        onIngredientUpdated={handleIngredientUpdated}
       />
     </View>
   );
