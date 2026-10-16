@@ -7,15 +7,20 @@ import {
 } from "@/types";
 import client from "./client";
 
+export interface SupplierPayload {
+  id?: string;
+  name: string;
+  itemSize: number;
+  itemSizeUnit: MetricUnit;
+  itemPrice: number;
+}
+
 export interface CreateIngredientPayload {
   name: string;
   businessId: string;
   categoryId: string;
-  supplier: string;
-  itemSize: number;
-  itemSizeUnit: MetricUnit;
-  itemPrice: number;
-  usableCostPerItem: number;
+  suppliers: SupplierPayload[];
+  calculationSupplierId?: string;
 }
 
 export const createIngredient = async (payload: CreateIngredientPayload) => {
@@ -62,6 +67,19 @@ export const deleteIngredient = async (id: string) => {
     const payload = response.data as ApiErrorPayload;
     throw new ApiError(payload);
   }
+};
+
+export const getIngredientById = async (id: string) => {
+  const response = await client.get<Ingredient | ApiErrorPayload>(
+    `/ingredients/${id}`,
+  );
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return response.data as Ingredient;
 };
 
 export const getIngredients = async (

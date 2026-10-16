@@ -29,6 +29,7 @@ export default function AppLayout() {
 
   return (
     <Tabs
+      initialRouteName="(recipes)"
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
         tabBarStyle: hideTabBar ? { display: "none" } : undefined,

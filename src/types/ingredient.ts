@@ -5,7 +5,17 @@ export interface Ingredient {
   businessId: string;
   categoryId: string;
   name: string;
-  supplier: string;
+  calculationSupplierId: string;
+  calculationSupplier: Supplier;
+  suppliers: Supplier[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  ingredientId: string;
+  name: string;
   itemSize: string;
   itemSizeUnit: MetricUnit;
   itemPrice: string;

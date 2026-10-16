@@ -27,7 +27,6 @@ const SignIn = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
@@ -71,9 +70,9 @@ const SignIn = () => {
       router.replace("/(app)/(recipes)");
     } catch (err) {
       if (err instanceof ApiError) {
-        setErrorMessage(err.message);
+        showToast(err.message, { variant: "error" });
       } else {
-        setErrorMessage("An unexpected error occurred");
+        showToast("An unexpected error occurred", { variant: "error" });
       }
     } finally {
       setIsLoading(false);
@@ -164,18 +163,17 @@ const SignIn = () => {
             </View>
 
             <Button onPress={handleSignIn}>Sign in</Button>
-            {errorMessage && (
-              <Text variant="label" color="error" style={styles.errorText}>
-                {errorMessage}
-              </Text>
-            )}
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <Text variant="label" color="textSecondary" style={styles.footer}>
+        <Text
+          variant="body"
+          color="textSecondary"
+          style={styles.footer(insets.bottom)}
+        >
           New to MenuMath?{" "}
           <Text
-            variant="label"
+            variant="body"
             style={styles.link}
             onPress={() => router.push("/signup")}
           >
@@ -238,9 +236,10 @@ const styles = StyleSheet.create((theme) => ({
   forgotPassword: {
     alignSelf: "flex-end",
   },
-  footer: {
+  footer: (inset: number) => ({
     textAlign: "center",
-  },
+    paddingBottom: inset,
+  }),
   link: {
     textDecorationLine: "underline",
     fontFamily: theme.fontFamily.semiBold,

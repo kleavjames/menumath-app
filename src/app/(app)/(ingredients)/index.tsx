@@ -2,7 +2,13 @@ import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Pressable, ScrollView, View } from "react-native";
+import {
+  Keyboard,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -10,7 +16,12 @@ import { Card, showToast, Text } from "@/components/atoms";
 import { SearchInput } from "@/components/molecules";
 import { Categories, IngredientView } from "@/components/organisms";
 import { CURRENCY_SYMBOLS } from "@/constants";
-import { formatPackPrice, formatPackSize, formatUnitCost } from "@/helpers";
+import {
+  formatPackPrice,
+  formatPackSize,
+  formatUnitCost,
+  getCalculationSupplier,
+} from "@/helpers";
 import { useKeyboard, useRole } from "@/hooks";
 import {
   createCategory,
@@ -57,6 +68,7 @@ export default function IngredientsScreen() {
   const [category, setCategory] = useState("All");
   const [selectedIngredient, setSelectedIngredient] =
     useState<Ingredient | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
 
   const initCategories = useCallback(async (bId: string) => {
@@ -97,6 +109,19 @@ export default function IngredientsScreen() {
     }, [businessId, initCategories, initIngredients]),
   );
 
+  const handleRefresh = useCallback(async () => {
+    if (!businessId) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        initCategories(businessId),
+        initIngredients(businessId),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [businessId, initCategories, initIngredients]);
+
   const selectedCategory = useMemo(
     () =>
       category === ALL_CATEGORY.name
@@ -121,8 +146,10 @@ export default function IngredientsScreen() {
       const matchesQuery =
         !normalizedQuery ||
         ingredient.name.toLowerCase().includes(normalizedQuery) ||
-        ingredient.supplier.toLowerCase().includes(normalizedQuery) ||
-        categoryName.toLowerCase().includes(normalizedQuery);
+        categoryName.toLowerCase().includes(normalizedQuery) ||
+        ingredient.suppliers.some((supplier) =>
+          supplier.name.toLowerCase().includes(normalizedQuery),
+        );
 
       return matchesCategory && matchesQuery;
     });
@@ -134,52 +161,38 @@ export default function IngredientsScreen() {
     ingredientSheetRef.current?.present();
   };
 
+  const handleIngredientUpdated = (ingredient: Ingredient) => {
+    setIngredients((prev) =>
+      prev.map((item) => (item.id === ingredient.id ? ingredient : item)),
+    );
+    setSelectedIngredient(ingredient);
+  };
+
   const handleEditIngredient = (ingredient: Ingredient) => {
     ingredientSheetRef.current?.dismiss();
     router.push({
       pathname: "/create-ingredient",
-      params: {
-        id: ingredient.id,
-        name: ingredient.name,
-        categoryId: ingredient.categoryId,
-        supplier: ingredient.supplier ?? "",
-        itemSize: ingredient.itemSize,
-        itemSizeUnit: ingredient.itemSizeUnit,
-        itemPrice: ingredient.itemPrice,
-      },
+      params: { id: ingredient.id },
     });
   };
 
-  const handleDeleteIngredient = (ingredient: Ingredient) => {
-    Alert.alert(
-      "Delete ingredient",
-      `Are you sure you want to delete "${ingredient.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteIngredient(ingredient.id);
-              setIngredients((prev) =>
-                prev.filter((item) => item.id !== ingredient.id),
-              );
-              ingredientSheetRef.current?.dismiss();
-              showToast("Ingredient deleted successfully", {
-                variant: "default",
-              });
-            } catch (error) {
-              if (error instanceof ApiError) {
-                showToast(error.message, { variant: "error" });
-              } else {
-                showToast("An unknown error occurred", { variant: "error" });
-              }
-            }
-          },
-        },
-      ],
-    );
+  const handleDeleteIngredient = async (ingredient: Ingredient) => {
+    try {
+      await deleteIngredient(ingredient.id);
+      setIngredients((prev) =>
+        prev.filter((item) => item.id !== ingredient.id),
+      );
+      ingredientSheetRef.current?.dismiss();
+      showToast("Ingredient deleted successfully", {
+        variant: "default",
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
   };
 
   const handleCreateCategory = async (name: string) => {
@@ -254,29 +267,33 @@ export default function IngredientsScreen() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={Keyboard.dismiss}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+          />
+        }
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text variant="hero" style={styles.headline}>
               Ingredients
             </Text>
-            {canInteract ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="New ingredient"
-                style={({ pressed }) => [
-                  styles.newButton,
-                  pressed && styles.newButtonPressed,
-                ]}
-                onPress={() => router.push("/create-ingredient")}
-              >
-                <UniSymbol
-                  name={{ ios: "plus", android: "add", web: "add" }}
-                  size={14}
-                />
-                <Text style={styles.newButtonLabel}>New</Text>
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="New ingredient"
+              style={({ pressed }) => [
+                styles.newButton,
+                pressed && styles.newButtonPressed,
+              ]}
+              onPress={() => router.push("/create-ingredient")}
+            >
+              <UniSymbol
+                name={{ ios: "plus", android: "add", web: "add" }}
+                size={14}
+              />
+              <Text style={styles.newButtonLabel}>New</Text>
+            </Pressable>
           </View>
           <Text color="textSecondary" variant="label">
             {ingredients.length} items · prices in {currency}
@@ -328,35 +345,41 @@ export default function IngredientsScreen() {
                   : "No ingredients match your search."}
               </Text>
             ) : (
-              filteredIngredients.map((ingredient, index) => (
-                <View key={ingredient.id}>
-                  {index > 0 ? <View style={styles.divider} /> : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.rowPressed,
-                    ]}
-                    onPress={() => handleOpenIngredient(ingredient)}
-                  >
-                    <View style={styles.rowLeft}>
-                      <Text style={styles.itemName}>{ingredient.name}</Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatPackSize(ingredient)}
-                        {ingredient.supplier ? ` · ${ingredient.supplier}` : ""}
-                      </Text>
-                    </View>
-                    <View style={styles.rowRight}>
-                      <Text style={styles.unitCost}>
-                        {formatPackPrice(ingredient, symbol)}
-                      </Text>
-                      <Text variant="caption" color="textSecondary">
-                        {formatUnitCost(ingredient, symbol)}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-              ))
+              filteredIngredients.map((ingredient, index) => {
+                const calculationSupplier = getCalculationSupplier(ingredient);
+
+                return (
+                  <View key={ingredient.id}>
+                    {index > 0 ? <View style={styles.divider} /> : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      style={({ pressed }) => [
+                        styles.row,
+                        pressed && styles.rowPressed,
+                      ]}
+                      onPress={() => handleOpenIngredient(ingredient)}
+                    >
+                      <View style={styles.rowLeft}>
+                        <Text style={styles.itemName}>{ingredient.name}</Text>
+                        <Text variant="caption" color="textSecondary">
+                          {formatPackSize(ingredient)}
+                          {calculationSupplier?.name
+                            ? ` · ${calculationSupplier.name}`
+                            : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.rowRight}>
+                        <Text style={styles.unitCost}>
+                          {formatPackPrice(ingredient, symbol)}
+                        </Text>
+                        <Text variant="caption" color="textSecondary">
+                          {formatUnitCost(ingredient, symbol)}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })
             )}
           </Card>
         </View>
@@ -374,6 +397,7 @@ export default function IngredientsScreen() {
         symbol={symbol}
         onEdit={handleEditIngredient}
         onDelete={handleDeleteIngredient}
+        onIngredientUpdated={handleIngredientUpdated}
       />
     </View>
   );

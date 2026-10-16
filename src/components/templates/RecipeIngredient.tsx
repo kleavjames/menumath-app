@@ -11,6 +11,7 @@ import {
   costUnitLabel,
   formatAmount,
   formatPrice,
+  getCalculationSupplier,
   toNumber,
   unitLabel,
 } from "@/helpers";
@@ -30,19 +31,31 @@ const UniSymbolMuted = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.textSecondary,
 }));
 
+const getCostSupplier = (ingredient: Ingredient) =>
+  ingredient.calculationSupplier ?? getCalculationSupplier(ingredient);
+
 /** Unit that `usableCostPerItem` is priced in (e.g. kg → g, L → mL). */
 const getIngredientUseUnit = (ingredient: Ingredient): MetricUnit => {
+  const supplier = getCostSupplier(ingredient);
+  if (!supplier) return MetricUnit.EACH;
+
   const option = METRIC_OPTIONS.find(
-    (item) => item.value === ingredient.itemSizeUnit,
+    (item) => item.value === supplier.itemSizeUnit,
   );
   return (
-    (option?.subUnit?.label as MetricUnit | undefined) ??
-    ingredient.itemSizeUnit
+    (option?.subUnit?.label as MetricUnit | undefined) ?? supplier.itemSizeUnit
   );
 };
 
 const getUnitRate = (ingredient: Ingredient) =>
-  toNumber(ingredient.usableCostPerItem);
+  toNumber(getCostSupplier(ingredient)?.usableCostPerItem);
+
+const formatIngredientRate = (ingredient: Ingredient, symbol: string) => {
+  const supplier = getCostSupplier(ingredient);
+  if (!supplier) return "—";
+
+  return `${symbol}${formatAmount(toNumber(supplier.usableCostPerItem))} / ${costUnitLabel(supplier.itemSizeUnit)}`;
+};
 
 const getIngredientUsePrice = (quantity: string, ingredient: Ingredient) =>
   toNumber(quantity) * getUnitRate(ingredient);
@@ -151,7 +164,6 @@ export const RecipeIngredient = ({
               if (!ingredient) return null;
 
               const unitLabelText = unitLabel(line.unit);
-              const unitRate = getUnitRate(ingredient);
 
               return (
                 <View key={line.ingredientId}>
@@ -162,8 +174,7 @@ export const RecipeIngredient = ({
                         {ingredient.name}
                       </Text>
                       <Text variant="caption" color="textSecondary">
-                        {symbol}
-                        {formatAmount(unitRate)} / {unitLabelText}
+                        {formatIngredientRate(ingredient, symbol)}
                       </Text>
                     </View>
 
@@ -326,10 +337,7 @@ const IngredientPicker = ({
                     <View style={styles.lineInfo}>
                       <Text style={styles.lineName}>{ingredient.name}</Text>
                       <Text variant="caption" color="textSecondary">
-                        {symbol}
-                        {formatAmount(
-                          toNumber(ingredient.usableCostPerItem),
-                        )} / {costUnitLabel(ingredient.itemSizeUnit)}
+                        {formatIngredientRate(ingredient, symbol)}
                       </Text>
                     </View>
                     <UniSymbol

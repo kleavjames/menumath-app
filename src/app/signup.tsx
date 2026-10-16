@@ -131,13 +131,17 @@ const SignUp = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Text variant="label" color="textSecondary" style={styles.footer}>
+      <Text
+        variant="body"
+        color="textSecondary"
+        style={styles.footer(insets.bottom)}
+      >
         By continuing you agree to the{" "}
-        <Text variant="label" color="textSecondary" style={styles.link}>
+        <Text variant="body" color="textSecondary" style={styles.link}>
           Terms of Service
         </Text>{" "}
         and{" "}
-        <Text variant="label" color="textSecondary" style={styles.link}>
+        <Text variant="body" color="textSecondary" style={styles.link}>
           Privacy Policy
         </Text>
         .
@@ -170,10 +174,11 @@ const styles = StyleSheet.create((theme) => ({
   form: {
     gap: theme.gap(2.5),
   },
-  footer: {
+  footer: (inset: number) => ({
     textAlign: "center",
     lineHeight: 18,
-  },
+    paddingBottom: inset,
+  }),
   link: {
     textDecorationLine: "underline",
   },

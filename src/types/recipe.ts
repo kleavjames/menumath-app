@@ -1,5 +1,5 @@
 import { MetricUnit } from "./business";
-import { Ingredient } from "./ingredient";
+import { Ingredient, Supplier } from "./ingredient";
 
 export interface Recipe {
   id: string;
@@ -22,10 +22,12 @@ export interface RecipeIngredient {
   id: string;
   recipeId: string;
   ingredientId: string;
+  ingredientSupplierId: string;
   quantity: string;
   pricePerUnit: number;
   unit: MetricUnit;
   ingredient: Ingredient;
+  ingredientSupplier: Supplier;
 }
 
 /** Method step sent when creating or updating a recipe. */

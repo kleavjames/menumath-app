@@ -5,22 +5,29 @@ import {
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { SymbolView } from "expo-symbols";
-import { useCallback, useMemo, type Ref } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState, type Ref } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Text } from "@/components/atoms";
-import { BigInfoCard } from "@/components/templates";
+import { Card, Loader, Pill, showToast, Text } from "@/components/atoms";
 import { METRIC_OPTIONS } from "@/constants";
 import {
+  costUnitLabel,
   formatAmount,
-  formatPackSize,
   formatPrice,
+  getCalculationSupplier,
   toNumber,
   unitLabel,
 } from "@/helpers";
-import { Ingredient } from "@/types";
+import { updateIngredient } from "@/service/api";
+import { ApiError, Ingredient, Supplier } from "@/types";
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
   tintColor: theme.colors.text,
@@ -36,7 +43,8 @@ type IngredientViewProps = {
   categoryName?: string;
   symbol: string;
   onEdit: (ingredient: Ingredient) => void;
-  onDelete: (ingredient: Ingredient) => void;
+  onDelete: (ingredient: Ingredient) => void | Promise<void>;
+  onIngredientUpdated?: (ingredient: Ingredient) => void;
   onDismiss?: () => void;
   hideButtons?: boolean;
 };
@@ -52,12 +60,31 @@ const DetailRow = ({ label, value, withDivider }: DetailRowProps) => (
     {withDivider ? <View style={styles.divider} /> : null}
     <View style={styles.detailRow}>
       <Text color="textSecondary">{label}</Text>
-      <Text style={styles.detailValue} numberOfLines={1}>
+      <Text style={styles.detailValue} numberOfLines={2}>
         {value}
       </Text>
     </View>
   </View>
 );
+
+const supplierDisplayName = (supplier: Supplier, index: number) =>
+  supplier.name.trim() || `Supplier ${index + 1}`;
+
+const formatSupplierPackSize = (supplier: Supplier) =>
+  `${formatAmount(toNumber(supplier.itemSize))} ${unitLabel(supplier.itemSizeUnit)}`;
+
+/** Mirrors create-ingredient usable cost breakdown for a single supplier. */
+const formatSupplierUsableCost = (supplier: Supplier, symbol: string) => {
+  const option = METRIC_OPTIONS.find((o) => o.value === supplier.itemSizeUnit);
+  const stored = toNumber(supplier.usableCostPerItem);
+  const subUnit = option?.subUnit;
+  const perUnit = subUnit ? stored * subUnit.perUnit : stored;
+
+  const primary = `${symbol}${formatPrice(perUnit)} per ${unitLabel(supplier.itemSizeUnit)}`;
+  if (!subUnit) return primary;
+
+  return `${primary} · ${symbol}${formatAmount(stored)} per ${unitLabel(subUnit.label)}`;
+};
 
 export const IngredientView = ({
   ref,
@@ -66,18 +93,117 @@ export const IngredientView = ({
   symbol,
   onEdit,
   onDelete,
+  onIngredientUpdated,
   hideButtons = false,
   onDismiss,
 }: IngredientViewProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(
+    null,
+  );
+  const [isSettingCalculationSupplier, setIsSettingCalculationSupplier] =
+    useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Dynamic sizing adds a content-height snap (index 0); 90% is the expanded snap.
+  useEffect(() => {
+    if (!ingredient) {
+      setSelectedSupplierId(null);
+      return;
+    }
+
+    const defaultSupplier = getCalculationSupplier(ingredient);
+    setSelectedSupplierId(defaultSupplier?.id ?? null);
+  }, [ingredient?.id, ingredient?.calculationSupplierId]);
+
+  const selectedSupplier = useMemo(() => {
+    if (!ingredient) return undefined;
+    return (
+      ingredient.suppliers.find(
+        (supplier) => supplier.id === selectedSupplierId,
+      ) ?? getCalculationSupplier(ingredient)
+    );
+  }, [ingredient, selectedSupplierId]);
+
+  /** Recipe-cost supplier first; order updates only when ingredient data changes (e.g. after API success). */
+  const suppliersForDisplay = useMemo(() => {
+    if (!ingredient) return [];
+    const { suppliers } = ingredient;
+    const calculationSupplier = getCalculationSupplier(ingredient);
+    const leadId = calculationSupplier?.id;
+    if (!leadId) return suppliers;
+
+    const leadIndex = suppliers.findIndex((supplier) => supplier.id === leadId);
+    if (leadIndex <= 0) return suppliers;
+
+    const lead = suppliers[leadIndex];
+    return [
+      lead,
+      ...suppliers.slice(0, leadIndex),
+      ...suppliers.slice(leadIndex + 1),
+    ];
+  }, [ingredient]);
+
   const snapPoints = useMemo(() => ["90%"], []);
   const maxDynamicContentSize = useMemo(
     () => windowHeight * 0.9,
     [windowHeight],
   );
+
+  const isSelectedCalculationSupplier =
+    Boolean(selectedSupplier) &&
+    selectedSupplier!.id === ingredient?.calculationSupplierId;
+
+  const handleDeletePress = useCallback(() => {
+    if (!ingredient || isDeleting) return;
+
+    Alert.alert(
+      "Delete ingredient",
+      `"${ingredient.name}" will be permanently deleted and removed from any recipes that use it. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setIsDeleting(true);
+              try {
+                await onDelete(ingredient);
+              } finally {
+                setIsDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [ingredient, isDeleting, onDelete]);
+
+  const handleSetCalculationSupplier = async () => {
+    if (!ingredient || !selectedSupplier || isSettingCalculationSupplier) {
+      return;
+    }
+
+    setIsSettingCalculationSupplier(true);
+    try {
+      const updated = await updateIngredient(ingredient.id, {
+        calculationSupplierId: selectedSupplier.id,
+      });
+      onIngredientUpdated?.(updated);
+      showToast("Recipe cost supplier updated", { variant: "default" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("Could not update recipe cost supplier", {
+          variant: "error",
+        });
+      }
+    } finally {
+      setIsSettingCalculationSupplier(false);
+    }
+  };
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -91,27 +217,8 @@ export const IngredientView = ({
     [],
   );
 
-  // `usableCostPerItem` is stored per sub unit (e.g. g) when the unit has one,
-  // otherwise per unit — mirror the breakdown shown on the create screen.
-  const renderCost = (item: Ingredient) => {
-    const option = METRIC_OPTIONS.find((o) => o.value === item.itemSizeUnit);
-    const stored = toNumber(item.usableCostPerItem);
-    const subUnit = option?.subUnit;
-
-    const perUnit = subUnit ? stored * subUnit.perUnit : stored;
-
-    return {
-      label: `Usable cost per ${unitLabel(item.itemSizeUnit)}`,
-      value: `${symbol}${formatPrice(perUnit)}`,
-      subValue: subUnit
-        ? `${symbol}${formatAmount(stored)} per ${unitLabel(subUnit.label)}`
-        : undefined,
-    };
-  };
-
-  const cost = ingredient ? renderCost(ingredient) : null;
-
   return (
+    <>
     <BottomSheetModal
       ref={ref}
       index={0}
@@ -125,7 +232,7 @@ export const IngredientView = ({
       <BottomSheetView
         style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
       >
-        {ingredient && cost ? (
+        {ingredient ? (
           <>
             <View style={styles.header}>
               <View style={styles.headerCopy}>
@@ -149,6 +256,7 @@ export const IngredientView = ({
                       pressed && styles.actionButtonPressed,
                     ]}
                     onPress={() => onEdit(ingredient)}
+                    disabled={isDeleting}
                   >
                     <UniSymbol
                       name={{ ios: "pencil", android: "edit", web: "edit" }}
@@ -160,9 +268,11 @@ export const IngredientView = ({
                     accessibilityLabel={`Delete ${ingredient.name}`}
                     style={({ pressed }) => [
                       styles.actionButton,
-                      pressed && styles.actionButtonPressed,
+                      pressed && !isDeleting && styles.actionButtonPressed,
+                      isDeleting && styles.actionButtonDisabled,
                     ]}
-                    onPress={() => onDelete(ingredient)}
+                    onPress={handleDeletePress}
+                    disabled={isDeleting}
                   >
                     <UniDangerSymbol
                       name={{ ios: "trash", android: "delete", web: "delete" }}
@@ -173,36 +283,106 @@ export const IngredientView = ({
               ) : null}
             </View>
 
-            <BigInfoCard
-              label={cost.label}
-              value={cost.value}
-              subValue={cost.subValue}
-            />
+            {ingredient.suppliers.length > 0 ? (
+              <>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="always"
+                  contentContainerStyle={styles.supplierPills}
+                >
+                  {suppliersForDisplay.map((supplier) => {
+                    const index = ingredient.suppliers.findIndex(
+                      (item) => item.id === supplier.id,
+                    );
+                    return (
+                      <Pill
+                        key={supplier.id}
+                        selected={selectedSupplierId === supplier.id}
+                        disabled={isSettingCalculationSupplier}
+                        onPress={() => setSelectedSupplierId(supplier.id)}
+                      >
+                        {supplierDisplayName(supplier, index)}
+                      </Pill>
+                    );
+                  })}
+                </ScrollView>
 
-            <Card style={styles.detailsCard}>
-              <DetailRow label="Supplier" value={ingredient.supplier || "—"} />
-              <DetailRow
-                label="Pack size"
-                value={formatPackSize(ingredient)}
-                withDivider
-              />
-              <DetailRow
-                label="Pack price"
-                value={`${symbol}${formatPrice(toNumber(ingredient.itemPrice))}`}
-                withDivider
-              />
-            </Card>
+                {selectedSupplier ? (
+                  <Card style={styles.detailsCard}>
+                    <View style={styles.detailRow}>
+                      <Text color="textSecondary">Supplier</Text>
+                      <View style={styles.supplierValue}>
+                        <Text style={styles.detailValue} numberOfLines={1}>
+                          {supplierDisplayName(
+                            selectedSupplier,
+                            Math.max(
+                              0,
+                              ingredient.suppliers.findIndex(
+                                (item) => item.id === selectedSupplier.id,
+                              ),
+                            ),
+                          )}
+                        </Text>
+                        {!isSelectedCalculationSupplier && !hideButtons ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Use this supplier for recipe costs"
+                            disabled={isSettingCalculationSupplier}
+                            hitSlop={8}
+                            style={({ pressed }) => [
+                              styles.setCalculationButton,
+                              pressed && styles.setCalculationButtonPressed,
+                              isSettingCalculationSupplier &&
+                                styles.setCalculationButtonDisabled,
+                            ]}
+                            onPress={() => void handleSetCalculationSupplier()}
+                          >
+                            <Text style={styles.setCalculationButtonLabel}>
+                              {isSettingCalculationSupplier
+                                ? "Setting…"
+                                : "Use this"}
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+                    <DetailRow
+                      label="Pack size"
+                      value={formatSupplierPackSize(selectedSupplier)}
+                      withDivider
+                    />
+                    <DetailRow
+                      label="Pack price"
+                      value={`${symbol}${formatPrice(toNumber(selectedSupplier.itemPrice))}`}
+                      withDivider
+                    />
+                    <DetailRow
+                      label={`Usable cost per ${costUnitLabel(selectedSupplier.itemSizeUnit)}`}
+                      value={formatSupplierUsableCost(selectedSupplier, symbol)}
+                      withDivider
+                    />
+                  </Card>
+                ) : null}
+              </>
+            ) : (
+              <Text variant="caption" color="textSecondary">
+                No suppliers for this ingredient.
+              </Text>
+            )}
           </>
         ) : null}
       </BottomSheetView>
     </BottomSheetModal>
+    <Loader visible={isDeleting} text="Deleting ingredient..." />
+    </>
   );
 };
 
 const styles = StyleSheet.create((theme) => ({
   content: {
     gap: theme.gap(2),
-    paddingHorizontal: theme.gap(3),
+    // paddingHorizontal: theme.gap(3),
     paddingTop: theme.gap(1),
   },
   header: {
@@ -210,6 +390,7 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: theme.gap(2),
+    paddingHorizontal: theme.gap(3),
   },
   headerCopy: {
     flex: 1,
@@ -232,10 +413,37 @@ const styles = StyleSheet.create((theme) => ({
   actionButtonPressed: {
     opacity: 0.7,
   },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  supplierPills: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(1),
+    marginHorizontal: theme.gap(3),
+  },
+  setCalculationButton: {
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.gap(0.5),
+    paddingHorizontal: theme.gap(1.25),
+    backgroundColor: theme.colors.text,
+  },
+  setCalculationButtonPressed: {
+    opacity: 0.7,
+  },
+  setCalculationButtonDisabled: {
+    opacity: 0.5,
+  },
+  setCalculationButtonLabel: {
+    fontSize: theme.fontSize.xs,
+    fontFamily: theme.fontFamily.semiBold,
+    color: theme.colors.background,
+  },
   detailsCard: {
     padding: 0,
     gap: 0,
     overflow: "hidden",
+    marginHorizontal: theme.gap(3),
   },
   detailRow: {
     flexDirection: "row",
@@ -245,8 +453,16 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: theme.gap(2),
     paddingHorizontal: theme.gap(2.5),
   },
+  supplierValue: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: theme.gap(1),
+  },
   detailValue: {
     flexShrink: 1,
+    textAlign: "right",
     fontFamily: theme.fontFamily.medium,
   },
   divider: {

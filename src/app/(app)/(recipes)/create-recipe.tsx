@@ -10,8 +10,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 
-import { Pill, showToast, StepperInput, Text } from "@/components/atoms";
+import {
+  Loader,
+  Pill,
+  showToast,
+  StepperInput,
+  Text,
+} from "@/components/atoms";
 import { Checkbox, PrefixInput, TextInput } from "@/components/molecules";
+import { RecipeSummary } from "@/components/organisms";
 import { RecipeIngredient } from "@/components/templates/RecipeIngredient";
 import {
   MethodStep,
@@ -19,12 +26,12 @@ import {
 } from "@/components/templates/RecipeMethods";
 
 import { CURRENCY_SYMBOLS } from "@/constants";
-import { formatAmount, formatPrice, roundTo2, toNumber } from "@/helpers";
+import { roundTo2, toNumber } from "@/helpers";
 import {
   createIngredient,
   createRecipe,
   getCategories,
-  getRecipe,
+  getRecipeById,
   updateRecipe,
 } from "@/service/api";
 import { useAccountUserStore } from "@/store";
@@ -45,13 +52,8 @@ type FieldErrors = {
   ingredients?: string;
 };
 
-type CostStatus = "good" | "warn" | "over";
-
-const getCostStatus = (percent: number, target: number): CostStatus => {
-  if (percent <= target) return "good";
-  if (percent <= target + 5) return "warn";
-  return "over";
-};
+const readRouteParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
   steps
@@ -64,7 +66,7 @@ const toRecipeStepsPayload = (steps: MethodStep[]): RecipeStep[] =>
 export default function CreateRecipeScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const recipeId = typeof id === "string" ? id : undefined;
+  const recipeId = readRouteParam(id);
   const isEditing = Boolean(recipeId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
@@ -87,6 +89,8 @@ export default function CreateRecipeScreen() {
   const [ingredients, setIngredients] = useState<RecipeIngredientPayload[]>([]);
   const [methodSteps, setMethodSteps] = useState<MethodStep[]>([]);
   const [addToIngredient, setAddToIngredient] = useState(false);
+  const [isMethodFocused, setIsMethodFocused] = useState(false);
+  const [isFetching, setIsFetching] = useState(isEditing);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -104,8 +108,13 @@ export default function CreateRecipeScreen() {
   useEffect(() => {
     if (!recipeId) return;
 
-    getRecipe(recipeId)
+    let cancelled = false;
+    setIsFetching(true);
+
+    getRecipeById(recipeId)
       .then((recipe) => {
+        if (cancelled) return;
+
         setName(recipe.name);
         setCategoryId(recipe.categoryId);
         setServings(recipe.servings);
@@ -125,12 +134,21 @@ export default function CreateRecipeScreen() {
         );
       })
       .catch((error) => {
+        if (cancelled) return;
         if (error instanceof ApiError) {
           showToast(error.message, { variant: "error" });
         } else {
           showToast("Could not load recipe", { variant: "error" });
         }
+        router.back();
+      })
+      .finally(() => {
+        if (!cancelled) setIsFetching(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [recipeId]);
 
   const clearError = (field: keyof FieldErrors) => {
@@ -173,8 +191,6 @@ export default function CreateRecipeScreen() {
       hasPrice,
     };
   }, [batchCost, servings, price]);
-
-  const status = getCostStatus(recipeCost, targetFoodCost);
 
   const handleIngredientsChange = (next: RecipeIngredientPayload[]) => {
     setIngredients(next);
@@ -220,11 +236,14 @@ export default function CreateRecipeScreen() {
         businessId: businessId!,
         name: name,
         categoryId: ingredientCategoryId,
-        supplier: "",
-        itemSize: 1,
-        itemSizeUnit: MetricUnit.EACH,
-        itemPrice: costPerServing,
-        usableCostPerItem: costPerServing,
+        suppliers: [
+          {
+            name: "",
+            itemSize: 1,
+            itemSizeUnit: MetricUnit.EACH,
+            itemPrice: costPerServing,
+          },
+        ],
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -247,10 +266,6 @@ export default function CreateRecipeScreen() {
         name,
         servings,
         pricePerServing: price,
-        costPerServing,
-        recipeCost,
-        profit: profitPerServing,
-        margin: marginProfit,
         ingredients,
         steps,
       };
@@ -306,12 +321,17 @@ export default function CreateRecipeScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPressIn={handleSave} style={styles.headerButton}>
+            <Pressable
+              onPressIn={handleSave}
+              style={styles.headerButton}
+              disabled={isFetching}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </Pressable>
           ),
         }}
       />
+      <Loader visible={isFetching} text="Loading recipe..." />
 
       <View style={[styles.screen, { paddingTop: insets.top * 2 }]}>
         <KeyboardAvoidingView
@@ -402,66 +422,24 @@ export default function CreateRecipeScreen() {
               error={errors.ingredients}
             />
 
-            <RecipeMethods steps={methodSteps} onChange={setMethodSteps} />
+            <RecipeMethods
+              steps={methodSteps}
+              onChange={setMethodSteps}
+              onEditingFocusChange={setIsMethodFocused}
+            />
           </ScrollView>
 
-          <View style={styles.summary(insets.bottom + 16)}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Text variant="caption" color="textSecondary">
-                  Cost / serving
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {symbol}
-                  {formatPrice(costPerServing)}
-                </Text>
-              </View>
-              <View style={[styles.summaryItem, styles.summaryItemCenter]}>
-                <Text variant="caption" color="textSecondary">
-                  Food cost
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {hasPrice ? `${recipeCost.toFixed(2)}%` : "—"}
-                </Text>
-              </View>
-              <View style={[styles.summaryItem, styles.summaryItemRight]}>
-                <Text variant="caption" color="textSecondary">
-                  Profit / serving
-                </Text>
-                <Text style={styles.summaryValue}>
-                  {hasPrice
-                    ? `${profitPerServing < 0 ? "-" : ""}${symbol}${formatPrice(Math.abs(profitPerServing))}`
-                    : "—"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.track}>
-              <View
-                style={[
-                  styles.fill,
-                  status === "good" && styles.fillGood,
-                  status === "warn" && styles.fillWarn,
-                  status === "over" && styles.fillOver,
-                  { width: `${Math.min(recipeCost, 100)}%` },
-                ]}
-              />
-              <View
-                style={[
-                  styles.targetMarker,
-                  { left: `${Math.min(targetFoodCost, 100)}%` },
-                ]}
-              />
-            </View>
-            <View style={styles.trackLabels}>
-              <Text variant="caption" color="textSecondary">
-                0%
-              </Text>
-              <Text variant="caption" color="textSecondary">
-                Target {formatAmount(targetFoodCost, 1)}%
-              </Text>
-            </View>
-          </View>
+          {!isMethodFocused ? (
+            <RecipeSummary
+              symbol={symbol}
+              costPerServing={costPerServing}
+              recipeCost={recipeCost}
+              profitPerServing={profitPerServing}
+              hasPrice={hasPrice}
+              targetFoodCost={targetFoodCost}
+              bottomInset={insets.bottom + 16}
+            />
+          ) : null}
         </KeyboardAvoidingView>
       </View>
     </>
@@ -511,64 +489,5 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: "stretch",
     justifyContent: "space-between",
     paddingVertical: theme.gap(1.5),
-  },
-  summary: (bottom: number) => ({
-    gap: theme.gap(1),
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingHorizontal: theme.gap(3),
-    paddingTop: theme.gap(2),
-    paddingBottom: bottom,
-  }),
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  summaryItem: {
-    flex: 1,
-    gap: theme.gap(0.5),
-  },
-  summaryItemCenter: {
-    alignItems: "center",
-  },
-  summaryItemRight: {
-    alignItems: "flex-end",
-  },
-  summaryValue: {
-    fontSize: theme.fontSize.lg,
-    fontFamily: theme.fontFamily.semiBold,
-    color: theme.colors.text,
-  },
-  track: {
-    height: 6,
-    borderRadius: 9999,
-    backgroundColor: theme.colors.surface,
-    justifyContent: "center",
-  },
-  fill: {
-    height: 6,
-    borderRadius: 9999,
-  },
-  fillGood: {
-    backgroundColor: "#2F8F55",
-  },
-  fillWarn: {
-    backgroundColor: theme.colors.secondary,
-  },
-  fillOver: {
-    backgroundColor: theme.colors.error,
-  },
-  targetMarker: {
-    position: "absolute",
-    width: 2,
-    height: 14,
-    marginLeft: -1,
-    borderRadius: 1,
-    backgroundColor: theme.colors.text,
-  },
-  trackLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
 }));

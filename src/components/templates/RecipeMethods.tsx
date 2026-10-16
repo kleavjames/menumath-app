@@ -1,4 +1,5 @@
 import { SymbolView } from "expo-symbols";
+import { useRef } from "react";
 import { Pressable, TextInput as RNTextInput, View } from "react-native";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -12,6 +13,7 @@ export type MethodStep = {
 export type RecipeMethodsProps = {
   steps: MethodStep[];
   onChange: (steps: MethodStep[]) => void;
+  onEditingFocusChange?: (focused: boolean) => void;
 };
 
 const UniSymbol = withUnistyles(SymbolView, (theme) => ({
@@ -30,7 +32,27 @@ const UniTextInput = withUnistyles(RNTextInput, (theme) => ({
   placeholderTextColor: theme.colors.textSecondary,
 }));
 
-export const RecipeMethods = ({ steps, onChange }: RecipeMethodsProps) => {
+export const RecipeMethods = ({
+  steps,
+  onChange,
+  onEditingFocusChange,
+}: RecipeMethodsProps) => {
+  const focusedInputsRef = useRef(0);
+
+  const handleStepFocus = () => {
+    focusedInputsRef.current += 1;
+    if (focusedInputsRef.current === 1) {
+      onEditingFocusChange?.(true);
+    }
+  };
+
+  const handleStepBlur = () => {
+    focusedInputsRef.current = Math.max(0, focusedInputsRef.current - 1);
+    if (focusedInputsRef.current === 0) {
+      onEditingFocusChange?.(false);
+    }
+  };
+
   const addStep = () => {
     const nextId = steps.reduce((max, step) => Math.max(max, step.id), 0) + 1;
     onChange([...steps, { id: nextId, text: "" }]);
@@ -109,6 +131,8 @@ export const RecipeMethods = ({ steps, onChange }: RecipeMethodsProps) => {
                   style={styles.stepInput}
                   value={step.text}
                   onChangeText={(value) => updateStep(step.id, value)}
+                  onFocus={handleStepFocus}
+                  onBlur={handleStepBlur}
                   placeholder="Describe this step"
                   multiline
                   autoFocus={step.text === ""}

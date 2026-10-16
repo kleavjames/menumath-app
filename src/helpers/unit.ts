@@ -1,6 +1,16 @@
 import { METRIC_OPTIONS } from "@/constants";
-import { Ingredient, MetricUnit } from "@/types";
+import { Ingredient, MetricUnit, Supplier } from "@/types";
 import { formatAmount, formatPrice, toNumber } from "./money";
+
+/** Supplier used for recipe cost calculations and list display. */
+export const getCalculationSupplier = (
+  ingredient: Ingredient,
+): Supplier | undefined => {
+  const matched = ingredient.suppliers.find(
+    (supplier) => supplier.id === ingredient.calculationSupplierId,
+  );
+  return matched ?? ingredient.suppliers[0];
+};
 
 export const unitLabel = (unit: MetricUnit | string) =>
   METRIC_OPTIONS.find((option) => option.value === unit)?.label ?? unit;
@@ -12,11 +22,20 @@ export const costUnitLabel = (unit: MetricUnit) => {
   return option?.label ?? unit;
 };
 
-export const formatPackSize = (ingredient: Ingredient) =>
-  `${formatAmount(toNumber(ingredient.itemSize))} ${unitLabel(ingredient.itemSizeUnit)}`;
+export const formatPackSize = (ingredient: Ingredient) => {
+  const supplier = getCalculationSupplier(ingredient);
+  if (!supplier) return "—";
+  return `${formatAmount(toNumber(supplier.itemSize))} ${unitLabel(supplier.itemSizeUnit)}`;
+};
 
-export const formatUnitCost = (ingredient: Ingredient, symbol: string) =>
-  `${symbol}${formatAmount(toNumber(ingredient.usableCostPerItem))}/${costUnitLabel(ingredient.itemSizeUnit)}`;
+export const formatUnitCost = (ingredient: Ingredient, symbol: string) => {
+  const supplier = getCalculationSupplier(ingredient);
+  if (!supplier) return "—";
+  return `${symbol}${formatAmount(toNumber(supplier.usableCostPerItem))}/${costUnitLabel(supplier.itemSizeUnit)}`;
+};
 
-export const formatPackPrice = (ingredient: Ingredient, symbol: string) =>
-  `${symbol}${formatPrice(toNumber(ingredient.itemPrice))}`;
+export const formatPackPrice = (ingredient: Ingredient, symbol: string) => {
+  const supplier = getCalculationSupplier(ingredient);
+  if (!supplier) return "—";
+  return `${symbol}${formatPrice(toNumber(supplier.itemPrice))}`;
+};

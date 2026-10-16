@@ -14,10 +14,6 @@ export interface CreateRecipePayload {
   name: string;
   servings: number;
   pricePerServing: number;
-  costPerServing: number;
-  recipeCost: number;
-  profit: number;
-  margin: number;
   ingredients: RecipeIngredientPayload[];
   steps: RecipeStep[];
 }
@@ -41,6 +37,17 @@ export type UpdateRecipePayload = Partial<
 >;
 
 export const getRecipe = async (id: string) => {
+  const response = await client.get<Recipe | ApiErrorPayload>(`/recipes/${id}`);
+
+  if (!response.ok) {
+    const payload = response.data as ApiErrorPayload;
+    throw new ApiError(payload);
+  }
+
+  return parseRecipe(response.data as Recipe);
+};
+
+export const getRecipeById = async (id: string) => {
   const response = await client.get<Recipe | ApiErrorPayload>(`/recipes/${id}`);
 
   if (!response.ok) {

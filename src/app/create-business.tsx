@@ -219,12 +219,12 @@ const CreateBusiness = () => {
                 hitSlop={8}
               >
                 <Text
-                  variant="label"
+                  variant="body"
                   color="textSecondary"
-                  style={styles.footer}
+                  style={styles.footer(insets.bottom)}
                 >
                   Joining an existing team?{" "}
-                  <Text variant="label" color="text" style={styles.link}>
+                  <Text variant="body" color="text" style={styles.link}>
                     Enter invite code
                   </Text>
                 </Text>
@@ -283,10 +283,11 @@ const styles = StyleSheet.create((theme) => ({
     marginTop: "auto",
     gap: theme.gap(2.5),
   },
-  footer: {
+  footer: (inset: number) => ({
     textAlign: "center",
     lineHeight: 20,
-  },
+    paddingBottom: inset,
+  }),
   link: {
     fontFamily: theme.fontFamily.semiBold,
     textDecorationLine: "underline",

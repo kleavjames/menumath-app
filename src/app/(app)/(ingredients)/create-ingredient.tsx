@@ -1,6 +1,8 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { SymbolView } from "expo-symbols";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -8,50 +10,135 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Loader, Pill, showToast, Text } from "@/components/atoms";
+import { Card, Loader, Pill, showToast, Text } from "@/components/atoms";
 import {
   PrefixInput,
   SelectWithInput,
   TextInput,
 } from "@/components/molecules";
-import { BigInfoCard } from "@/components/templates/BigInfoCard";
-
 import { CURRENCY_SYMBOLS, METRIC_OPTIONS } from "@/constants";
 import { formatAmount, formatPrice, toNumber } from "@/helpers";
 import {
   createIngredient,
   getCategories,
+  getIngredientById,
   updateIngredient,
 } from "@/service/api";
+import type { SupplierPayload } from "@/service/api/ingredients";
 import { useAccountUserStore } from "@/store";
-import { ApiError, CategoryType, Currency, MetricUnit } from "@/types";
+import {
+  ApiError,
+  CategoryType,
+  Currency,
+  MetricUnit,
+  Supplier,
+} from "@/types";
 
-type FieldErrors = {
-  name?: string;
+const UniSymbol = withUnistyles(SymbolView, (theme) => ({
+  tintColor: theme.colors.text,
+}));
+
+const UniDangerSymbol = withUnistyles(SymbolView, (theme) => ({
+  tintColor: theme.colors.error,
+}));
+
+type SupplierRow = {
+  id: string;
+  serverId?: string;
+  name: string;
+  packSize: string;
+  unit: MetricUnit;
+  packPrice: string;
+};
+
+type SupplierFieldErrors = {
   packSize?: string;
   packPrice?: string;
 };
 
-type EditParams = {
-  id?: string;
+type FieldErrors = {
   name?: string;
-  categoryId?: string;
-  supplier?: string;
-  itemSize?: string;
-  itemSizeUnit?: string;
-  itemPrice?: string;
+  suppliers?: Record<string, SupplierFieldErrors>;
 };
+
+type RouteParams = {
+  id?: string;
+};
+
+const readRouteParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 /** Normalizes API decimals (e.g. "25.0000") into a plain editable number string. */
 const toInputValue = (value: string | undefined, fallback: string) =>
   value === undefined ? fallback : String(toNumber(value));
 
+let supplierRowCounter = 0;
+
+const createSupplierRow = (
+  overrides?: Partial<Omit<SupplierRow, "id">>,
+): SupplierRow => ({
+  id: `supplier-${supplierRowCounter++}`,
+  name: "",
+  packSize: "1",
+  unit: MetricUnit.KG,
+  packPrice: "",
+  ...overrides,
+});
+
+const supplierToRow = (supplier: Supplier): SupplierRow => ({
+  id: supplier.id,
+  serverId: supplier.id,
+  name: supplier.name,
+  packSize: toInputValue(supplier.itemSize, "1"),
+  unit: supplier.itemSizeUnit,
+  packPrice: toInputValue(supplier.itemPrice, ""),
+});
+
+const computeUsableCost = (
+  packSize: string,
+  packPrice: string,
+  unit: MetricUnit,
+) => {
+  const size = toNumber(packSize);
+  const price = toNumber(packPrice);
+  const unitOption = METRIC_OPTIONS.find((option) => option.value === unit);
+
+  if (size <= 0 || price <= 0) {
+    return { perUnit: 0, perSubUnit: null as number | null, unitOption };
+  }
+
+  const perUnit = price / size;
+  const subUnit = unitOption?.subUnit;
+
+  return {
+    perUnit,
+    perSubUnit: subUnit ? perUnit / subUnit.perUnit : null,
+    unitOption,
+  };
+};
+
+const toSupplierPayload = (row: SupplierRow): SupplierPayload => {
+  const { perUnit, perSubUnit } = computeUsableCost(
+    row.packSize,
+    row.packPrice,
+    row.unit,
+  );
+
+  return {
+    ...(row.serverId ? { id: row.serverId } : {}),
+    name: row.name.trim(),
+    itemSize: toNumber(row.packSize),
+    itemSizeUnit: row.unit,
+    itemPrice: toNumber(row.packPrice),
+  };
+};
+
 export default function CreateIngredientScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<EditParams>();
-  const ingredientId = params.id;
+  const params = useLocalSearchParams<RouteParams>();
+  const ingredientId = readRouteParam(params.id);
   const isEditing = Boolean(ingredientId);
 
   const businessId = useAccountUserStore((state) => state.businessId);
@@ -61,22 +148,19 @@ export default function CreateIngredientScreen() {
 
   const symbol = CURRENCY_SYMBOLS[currency];
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState(params.name ?? "");
-  const [categoryId, setCategoryId] = useState<string | undefined>(
-    params.categoryId,
-  );
+  const [isFetching, setIsFetching] = useState(isEditing);
+  const [isSaving, setIsSaving] = useState(false);
+  const [name, setName] = useState("");
+  const [categoryId, setCategoryId] = useState<string | undefined>();
   const [categoryOptions, setCategoryOptions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [supplier, setSupplier] = useState(params.supplier ?? "");
-  const [packSize, setPackSize] = useState(toInputValue(params.itemSize, "1"));
-  const [unit, setUnit] = useState(
-    (params.itemSizeUnit as MetricUnit | undefined) ?? MetricUnit.KG,
-  );
-  const [packPrice, setPackPrice] = useState(
-    toInputValue(params.itemPrice, ""),
-  );
+  const [suppliers, setSuppliers] = useState<SupplierRow[]>(() => [
+    createSupplierRow(),
+  ]);
+  const [calculationSupplierId, setCalculationSupplierId] = useState<
+    string | undefined
+  >();
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -91,6 +175,43 @@ export default function CreateIngredientScreen() {
       .catch((error) => console.error(error));
   }, [businessId]);
 
+  useEffect(() => {
+    if (!ingredientId) return;
+
+    let cancelled = false;
+
+    setIsFetching(true);
+    getIngredientById(ingredientId)
+      .then((ingredient) => {
+        if (cancelled) return;
+
+        setName(ingredient.name);
+        setCategoryId(ingredient.categoryId);
+        setCalculationSupplierId(ingredient.calculationSupplierId);
+        setSuppliers(
+          ingredient.suppliers.length > 0
+            ? ingredient.suppliers.map(supplierToRow)
+            : [createSupplierRow()],
+        );
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          showToast(error.message, { variant: "error" });
+        } else {
+          showToast("Failed to load ingredient", { variant: "error" });
+        }
+        router.back();
+      })
+      .finally(() => {
+        if (!cancelled) setIsFetching(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ingredientId]);
+
   const clearError = (field: keyof FieldErrors) => {
     setErrors((prev) => {
       if (!prev[field]) return prev;
@@ -100,24 +221,33 @@ export default function CreateIngredientScreen() {
     });
   };
 
-  const unitOption = METRIC_OPTIONS.find((option) => option.value === unit);
+  const clearSupplierError = (
+    supplierId: string,
+    field: keyof SupplierFieldErrors,
+  ) => {
+    setErrors((prev) => {
+      const rowErrors = prev.suppliers?.[supplierId];
+      if (!rowErrors?.[field]) return prev;
 
-  const usableCost = useMemo(() => {
-    const size = toNumber(packSize);
-    const price = toNumber(packPrice);
+      const nextRowErrors = { ...rowErrors };
+      delete nextRowErrors[field];
 
-    if (size <= 0 || price <= 0) {
-      return { perUnit: 0, perSubUnit: null as number | null };
-    }
+      const nextSuppliers = { ...prev.suppliers };
+      if (Object.keys(nextRowErrors).length === 0) {
+        delete nextSuppliers[supplierId];
+      } else {
+        nextSuppliers[supplierId] = nextRowErrors;
+      }
 
-    const perUnit = price / size;
-    const subUnit = unitOption?.subUnit;
-
-    return {
-      perUnit,
-      perSubUnit: subUnit ? perUnit / subUnit.perUnit : null,
-    };
-  }, [packSize, packPrice, unitOption]);
+      const next = { ...prev };
+      if (Object.keys(nextSuppliers).length === 0) {
+        delete next.suppliers;
+      } else {
+        next.suppliers = nextSuppliers;
+      }
+      return next;
+    });
+  };
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
@@ -125,34 +255,124 @@ export default function CreateIngredientScreen() {
     if (!name.trim()) {
       next.name = "Ingredient name is required";
     }
-    if (toNumber(packSize) <= 0) {
-      next.packSize = "Enter a pack size greater than 0";
+
+    const supplierErrors: Record<string, SupplierFieldErrors> = {};
+    for (const row of suppliers) {
+      const rowErrors: SupplierFieldErrors = {};
+      if (toNumber(row.packSize) <= 0) {
+        rowErrors.packSize = "Enter a pack size greater than 0";
+      }
+      if (toNumber(row.packPrice) <= 0) {
+        rowErrors.packPrice = "Enter the pack price";
+      }
+      if (Object.keys(rowErrors).length > 0) {
+        supplierErrors[row.id] = rowErrors;
+      }
     }
-    if (toNumber(packPrice) <= 0) {
-      next.packPrice = "Enter the pack price";
+    if (Object.keys(supplierErrors).length > 0) {
+      next.suppliers = supplierErrors;
     }
 
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
+  const updateSupplier = (
+    id: string,
+    patch: Partial<Omit<SupplierRow, "id">>,
+  ) => {
+    setSuppliers((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const addSupplier = () => {
+    setSuppliers((prev) => [...prev, createSupplierRow()]);
+  };
+
+  const resolveSupplierReferenceId = (row: SupplierRow) =>
+    row.serverId ?? row.id;
+
+  const removeSupplier = (id: string) => {
+    const row = suppliers.find((item) => item.id === id);
+    if (!row) return;
+
+    if (
+      isEditing &&
+      calculationSupplierId &&
+      resolveSupplierReferenceId(row) === calculationSupplierId
+    ) {
+      Alert.alert(
+        "Cannot delete supplier",
+        "This supplier is being used for recipe calculation. Set another supplier for recipe costs before removing it.",
+      );
+      return;
+    }
+
+    setSuppliers((prev) => {
+      if (prev.length <= 1) return prev;
+
+      const removed = prev.find((item) => item.id === id);
+      const next = prev.filter((item) => item.id !== id);
+
+      if (removed) {
+        const removedRef = resolveSupplierReferenceId(removed);
+        setCalculationSupplierId((current) => {
+          if (current !== removedRef) return current;
+          const fallback = next[0];
+          return fallback ? resolveSupplierReferenceId(fallback) : undefined;
+        });
+      }
+
+      return next;
+    });
+    setErrors((prev) => {
+      if (!prev.suppliers?.[id]) return prev;
+      const nextSuppliers = { ...prev.suppliers };
+      delete nextSuppliers[id];
+      const next = { ...prev };
+      if (Object.keys(nextSuppliers).length === 0) {
+        delete next.suppliers;
+      } else {
+        next.suppliers = nextSuppliers;
+      }
+      return next;
+    });
+  };
+
   const handleSave = async () => {
     if (!validate()) return;
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
+      const supplierPayloads = suppliers.map(toSupplierPayload);
       const values = {
         name,
         categoryId: categoryId!,
-        supplier,
-        itemSize: toNumber(packSize),
-        itemSizeUnit: unit,
-        itemPrice: toNumber(packPrice),
-        usableCostPerItem: usableCost.perSubUnit ?? usableCost.perUnit,
+        suppliers: supplierPayloads,
       };
 
+      const activeCalculationId = (() => {
+        const matched = suppliers.find(
+          (row) => resolveSupplierReferenceId(row) === calculationSupplierId,
+        );
+        if (matched?.serverId) return matched.serverId;
+        if (
+          calculationSupplierId &&
+          suppliers.some((row) => row.serverId === calculationSupplierId)
+        ) {
+          return calculationSupplierId;
+        }
+        return suppliers.find((row) => row.serverId)?.serverId;
+      })();
+
       if (ingredientId) {
-        await updateIngredient(ingredientId, values);
+        await updateIngredient(ingredientId, {
+          ...values,
+          ...(activeCalculationId
+            ? { calculationSupplierId: activeCalculationId }
+            : {}),
+        });
       } else {
         await createIngredient({ businessId: businessId!, ...values });
       }
@@ -171,9 +391,11 @@ export default function CreateIngredientScreen() {
         showToast("An unknown error occurred", { variant: "error" });
       }
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
+
+  const isLoading = isFetching || isSaving;
 
   return (
     <>
@@ -187,7 +409,11 @@ export default function CreateIngredientScreen() {
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPressIn={handleSave} style={styles.saveButton}>
+            <Pressable
+              onPressIn={handleSave}
+              style={styles.saveButton}
+              disabled={isFetching}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </Pressable>
           ),
@@ -195,7 +421,13 @@ export default function CreateIngredientScreen() {
       />
       <Loader
         visible={isLoading}
-        text={isEditing ? "Updating ingredient..." : "Creating ingredient..."}
+        text={
+          isFetching
+            ? "Loading ingredient..."
+            : isEditing
+              ? "Updating ingredient..."
+              : "Creating ingredient..."
+        }
       />
       <View
         style={[
@@ -222,6 +454,7 @@ export default function CreateIngredientScreen() {
               placeholder="Ingredient name"
               autoCapitalize="words"
               error={errors.name}
+              editable={!isFetching}
             />
 
             <View style={styles.form}>
@@ -237,6 +470,7 @@ export default function CreateIngredientScreen() {
                         key={value}
                         selected={categoryId === value}
                         onPress={() => setCategoryId(value)}
+                        disabled={isFetching}
                       >
                         {label}
                       </Pill>
@@ -245,56 +479,122 @@ export default function CreateIngredientScreen() {
                 )}
               </View>
 
-              <TextInput
-                label="Supplier"
-                value={supplier}
-                onChangeText={setSupplier}
-                placeholder="Optional"
-                autoCapitalize="words"
-              />
-
-              <View style={styles.purchaseFields}>
-                <View style={styles.purchaseField}>
-                  <SelectWithInput
-                    label="Pack size"
-                    value={packSize}
-                    onChangeText={(value) => {
-                      setPackSize(value);
-                      clearError("packSize");
-                    }}
-                    options={METRIC_OPTIONS}
-                    selected={unit}
-                    onSelect={(value) => setUnit(value as MetricUnit)}
-                    selectPlaceholder="Unit"
-                    error={errors.packSize}
-                  />
+              <View style={styles.suppliersSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Suppliers</Text>
+                  <Text style={styles.sectionCount}>{suppliers.length}</Text>
                 </View>
 
-                <View style={styles.purchaseField}>
-                  <PrefixInput
-                    label="Pack price"
-                    prefix={symbol}
-                    value={packPrice}
-                    onChangeText={(value) => {
-                      setPackPrice(value);
-                      clearError("packPrice");
-                    }}
-                    placeholder="0.00"
-                    error={errors.packPrice}
+                {suppliers.map((row, index) => {
+                  const rowErrors = errors.suppliers?.[row.id];
+                  const cost = computeUsableCost(
+                    row.packSize,
+                    row.packPrice,
+                    row.unit,
+                  );
+
+                  return (
+                    <Card key={row.id} style={styles.supplierCard}>
+                      <View style={styles.supplierCardHeader}>
+                        <Text variant="label" color="textSecondary">
+                          Supplier {index + 1}
+                        </Text>
+                        {suppliers.length > 1 ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Remove supplier ${index + 1}`}
+                            hitSlop={8}
+                            onPress={() => removeSupplier(row.id)}
+                            disabled={isFetching}
+                          >
+                            <UniDangerSymbol
+                              name={{
+                                ios: "trash",
+                                android: "delete",
+                                web: "delete",
+                              }}
+                              size={18}
+                            />
+                          </Pressable>
+                        ) : null}
+                      </View>
+
+                      <TextInput
+                        label="Name"
+                        value={row.name}
+                        onChangeText={(value) =>
+                          updateSupplier(row.id, { name: value })
+                        }
+                        placeholder="Optional"
+                        autoCapitalize="words"
+                        editable={!isFetching}
+                      />
+
+                      <View style={styles.purchaseFields}>
+                        <View style={styles.purchaseField}>
+                          <SelectWithInput
+                            label="Pack size"
+                            value={row.packSize}
+                            onChangeText={(value) => {
+                              updateSupplier(row.id, { packSize: value });
+                              clearSupplierError(row.id, "packSize");
+                            }}
+                            options={METRIC_OPTIONS}
+                            selected={row.unit}
+                            onSelect={(value) =>
+                              updateSupplier(row.id, {
+                                unit: value as MetricUnit,
+                              })
+                            }
+                            selectPlaceholder="Unit"
+                            error={rowErrors?.packSize}
+                          />
+                        </View>
+
+                        <View style={styles.purchaseField}>
+                          <PrefixInput
+                            label="Pack price"
+                            prefix={symbol}
+                            value={row.packPrice}
+                            onChangeText={(value) => {
+                              updateSupplier(row.id, { packPrice: value });
+                              clearSupplierError(row.id, "packPrice");
+                            }}
+                            placeholder="0.00"
+                            error={rowErrors?.packPrice}
+                          />
+                        </View>
+                      </View>
+
+                      <Text variant="label" color="textSecondary">
+                        Usable cost per {row.unit}: {symbol}
+                        {formatPrice(cost.perUnit)}
+                        {cost.perSubUnit !== null && cost.unitOption?.subUnit
+                          ? ` · ${symbol}${formatAmount(cost.perSubUnit)} per ${cost.unitOption.subUnit.label}`
+                          : ""}
+                      </Text>
+                    </Card>
+                  );
+                })}
+
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.addButton,
+                    pressed && styles.addButtonPressed,
+                  ]}
+                  onPress={addSupplier}
+                  disabled={isFetching}
+                >
+                  <UniSymbol
+                    name={{ ios: "plus", android: "add", web: "add" }}
+                    size={14}
                   />
-                </View>
+                  <Text style={styles.addButtonLabel}>Add supplier</Text>
+                </Pressable>
               </View>
             </View>
 
-            <BigInfoCard
-              label={`Usable cost per ${unit}`}
-              value={`${symbol}${formatPrice(usableCost.perUnit)}`}
-              subValue={
-                usableCost.perSubUnit !== null && unitOption?.subUnit
-                  ? `${symbol}${formatAmount(usableCost.perSubUnit)} per ${unitOption.subUnit.label}`
-                  : undefined
-              }
-            />
             <Text variant="label" color="textSecondary">
               Cost updates across every recipe that uses this ingredient.
             </Text>
@@ -331,9 +631,32 @@ const styles = StyleSheet.create((theme) => ({
     flexWrap: "wrap",
     gap: theme.gap(1),
   },
-  // actions: {
-  //   marginTop: "auto",
-  // },
+  suppliersSection: {
+    gap: theme.gap(1.5),
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionTitle: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.semiBold,
+    color: theme.colors.text,
+  },
+  sectionCount: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.regular,
+    color: theme.colors.textSecondary,
+  },
+  supplierCard: {
+    gap: theme.gap(2),
+  },
+  supplierCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   purchaseFields: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -341,6 +664,25 @@ const styles = StyleSheet.create((theme) => ({
   },
   purchaseField: {
     flex: 1,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.gap(1),
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.textSecondary,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.gap(2),
+  },
+  addButtonLabel: {
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.medium,
+    color: theme.colors.text,
+  },
+  addButtonPressed: {
+    opacity: 0.7,
   },
   saveButton: {
     paddingHorizontal: theme.gap(2),
