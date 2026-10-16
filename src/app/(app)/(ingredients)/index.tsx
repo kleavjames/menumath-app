@@ -3,7 +3,6 @@ import { router, useFocusEffect } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Keyboard,
   Pressable,
   RefreshControl,
@@ -177,36 +176,23 @@ export default function IngredientsScreen() {
     });
   };
 
-  const handleDeleteIngredient = (ingredient: Ingredient) => {
-    Alert.alert(
-      "Delete ingredient",
-      `Are you sure you want to delete "${ingredient.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteIngredient(ingredient.id);
-              setIngredients((prev) =>
-                prev.filter((item) => item.id !== ingredient.id),
-              );
-              ingredientSheetRef.current?.dismiss();
-              showToast("Ingredient deleted successfully", {
-                variant: "default",
-              });
-            } catch (error) {
-              if (error instanceof ApiError) {
-                showToast(error.message, { variant: "error" });
-              } else {
-                showToast("An unknown error occurred", { variant: "error" });
-              }
-            }
-          },
-        },
-      ],
-    );
+  const handleDeleteIngredient = async (ingredient: Ingredient) => {
+    try {
+      await deleteIngredient(ingredient.id);
+      setIngredients((prev) =>
+        prev.filter((item) => item.id !== ingredient.id),
+      );
+      ingredientSheetRef.current?.dismiss();
+      showToast("Ingredient deleted successfully", {
+        variant: "default",
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, { variant: "error" });
+      } else {
+        showToast("An unknown error occurred", { variant: "error" });
+      }
+    }
   };
 
   const handleCreateCategory = async (name: string) => {

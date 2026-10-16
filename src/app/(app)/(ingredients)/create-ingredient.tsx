@@ -2,6 +2,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -293,11 +294,26 @@ export default function CreateIngredientScreen() {
     row.serverId ?? row.id;
 
   const removeSupplier = (id: string) => {
+    const row = suppliers.find((item) => item.id === id);
+    if (!row) return;
+
+    if (
+      isEditing &&
+      calculationSupplierId &&
+      resolveSupplierReferenceId(row) === calculationSupplierId
+    ) {
+      Alert.alert(
+        "Cannot delete supplier",
+        "This supplier is being used for recipe calculation. Set another supplier for recipe costs before removing it.",
+      );
+      return;
+    }
+
     setSuppliers((prev) => {
       if (prev.length <= 1) return prev;
 
-      const removed = prev.find((row) => row.id === id);
-      const next = prev.filter((row) => row.id !== id);
+      const removed = prev.find((item) => item.id === id);
+      const next = prev.filter((item) => item.id !== id);
 
       if (removed) {
         const removedRef = resolveSupplierReferenceId(removed);

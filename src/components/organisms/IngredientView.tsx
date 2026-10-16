@@ -6,11 +6,17 @@ import {
 } from "@gorhom/bottom-sheet";
 import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState, type Ref } from "react";
-import { Pressable, ScrollView, useWindowDimensions, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
-import { Card, Pill, showToast, Text } from "@/components/atoms";
+import { Card, Loader, Pill, showToast, Text } from "@/components/atoms";
 import { METRIC_OPTIONS } from "@/constants";
 import {
   costUnitLabel,
@@ -37,7 +43,7 @@ type IngredientViewProps = {
   categoryName?: string;
   symbol: string;
   onEdit: (ingredient: Ingredient) => void;
-  onDelete: (ingredient: Ingredient) => void;
+  onDelete: (ingredient: Ingredient) => void | Promise<void>;
   onIngredientUpdated?: (ingredient: Ingredient) => void;
   onDismiss?: () => void;
   hideButtons?: boolean;
@@ -98,6 +104,7 @@ export const IngredientView = ({
   );
   const [isSettingCalculationSupplier, setIsSettingCalculationSupplier] =
     useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!ingredient) {
@@ -118,6 +125,25 @@ export const IngredientView = ({
     );
   }, [ingredient, selectedSupplierId]);
 
+  /** Recipe-cost supplier first; order updates only when ingredient data changes (e.g. after API success). */
+  const suppliersForDisplay = useMemo(() => {
+    if (!ingredient) return [];
+    const { suppliers } = ingredient;
+    const calculationSupplier = getCalculationSupplier(ingredient);
+    const leadId = calculationSupplier?.id;
+    if (!leadId) return suppliers;
+
+    const leadIndex = suppliers.findIndex((supplier) => supplier.id === leadId);
+    if (leadIndex <= 0) return suppliers;
+
+    const lead = suppliers[leadIndex];
+    return [
+      lead,
+      ...suppliers.slice(0, leadIndex),
+      ...suppliers.slice(leadIndex + 1),
+    ];
+  }, [ingredient]);
+
   const snapPoints = useMemo(() => ["90%"], []);
   const maxDynamicContentSize = useMemo(
     () => windowHeight * 0.9,
@@ -127,6 +153,32 @@ export const IngredientView = ({
   const isSelectedCalculationSupplier =
     Boolean(selectedSupplier) &&
     selectedSupplier!.id === ingredient?.calculationSupplierId;
+
+  const handleDeletePress = useCallback(() => {
+    if (!ingredient || isDeleting) return;
+
+    Alert.alert(
+      "Delete ingredient",
+      `"${ingredient.name}" will be permanently deleted and removed from any recipes that use it. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setIsDeleting(true);
+              try {
+                await onDelete(ingredient);
+              } finally {
+                setIsDeleting(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }, [ingredient, isDeleting, onDelete]);
 
   const handleSetCalculationSupplier = async () => {
     if (!ingredient || !selectedSupplier || isSettingCalculationSupplier) {
@@ -166,6 +218,7 @@ export const IngredientView = ({
   );
 
   return (
+    <>
     <BottomSheetModal
       ref={ref}
       index={0}
@@ -203,6 +256,7 @@ export const IngredientView = ({
                       pressed && styles.actionButtonPressed,
                     ]}
                     onPress={() => onEdit(ingredient)}
+                    disabled={isDeleting}
                   >
                     <UniSymbol
                       name={{ ios: "pencil", android: "edit", web: "edit" }}
@@ -214,9 +268,11 @@ export const IngredientView = ({
                     accessibilityLabel={`Delete ${ingredient.name}`}
                     style={({ pressed }) => [
                       styles.actionButton,
-                      pressed && styles.actionButtonPressed,
+                      pressed && !isDeleting && styles.actionButtonPressed,
+                      isDeleting && styles.actionButtonDisabled,
                     ]}
-                    onPress={() => onDelete(ingredient)}
+                    onPress={handleDeletePress}
+                    disabled={isDeleting}
                   >
                     <UniDangerSymbol
                       name={{ ios: "trash", android: "delete", web: "delete" }}
@@ -235,15 +291,21 @@ export const IngredientView = ({
                   keyboardShouldPersistTaps="always"
                   contentContainerStyle={styles.supplierPills}
                 >
-                  {ingredient.suppliers.map((supplier, index) => (
-                    <Pill
-                      key={supplier.id}
-                      selected={selectedSupplierId === supplier.id}
-                      onPress={() => setSelectedSupplierId(supplier.id)}
-                    >
-                      {supplierDisplayName(supplier, index)}
-                    </Pill>
-                  ))}
+                  {suppliersForDisplay.map((supplier) => {
+                    const index = ingredient.suppliers.findIndex(
+                      (item) => item.id === supplier.id,
+                    );
+                    return (
+                      <Pill
+                        key={supplier.id}
+                        selected={selectedSupplierId === supplier.id}
+                        disabled={isSettingCalculationSupplier}
+                        onPress={() => setSelectedSupplierId(supplier.id)}
+                      >
+                        {supplierDisplayName(supplier, index)}
+                      </Pill>
+                    );
+                  })}
                 </ScrollView>
 
                 {selectedSupplier ? (
@@ -277,7 +339,9 @@ export const IngredientView = ({
                             onPress={() => void handleSetCalculationSupplier()}
                           >
                             <Text style={styles.setCalculationButtonLabel}>
-                              {isSettingCalculationSupplier ? "…" : "Use this"}
+                              {isSettingCalculationSupplier
+                                ? "Setting…"
+                                : "Use this"}
                             </Text>
                           </Pressable>
                         ) : null}
@@ -310,6 +374,8 @@ export const IngredientView = ({
         ) : null}
       </BottomSheetView>
     </BottomSheetModal>
+    <Loader visible={isDeleting} text="Deleting ingredient..." />
+    </>
   );
 };
 
@@ -346,6 +412,9 @@ const styles = StyleSheet.create((theme) => ({
   },
   actionButtonPressed: {
     opacity: 0.7,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
   supplierPills: {
     flexDirection: "row",
