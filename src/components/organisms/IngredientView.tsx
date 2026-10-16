@@ -8,11 +8,12 @@ import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useMemo, useState, type Ref } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
-  ScrollView,
   useWindowDimensions,
   View,
 } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 
@@ -219,168 +220,180 @@ export const IngredientView = ({
 
   return (
     <>
-    <BottomSheetModal
-      ref={ref}
-      index={0}
-      enableDynamicSizing
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      snapPoints={snapPoints}
-      maxDynamicContentSize={maxDynamicContentSize}
-      onDismiss={onDismiss}
-    >
-      <BottomSheetView
-        style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+      <BottomSheetModal
+        ref={ref}
+        index={0}
+        enableDynamicSizing
+        enablePanDownToClose
+        backdropComponent={renderBackdrop}
+        snapPoints={snapPoints}
+        maxDynamicContentSize={maxDynamicContentSize}
+        onDismiss={onDismiss}
       >
-        {ingredient ? (
-          <>
-            <View style={styles.header}>
-              <View style={styles.headerCopy}>
-                <Text variant="title" numberOfLines={2}>
-                  {ingredient.name}
-                </Text>
-                {categoryName ? (
-                  <Text variant="caption" color="textSecondary">
-                    {categoryName}
+        <BottomSheetView
+          style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        >
+          {ingredient ? (
+            <>
+              <View style={styles.header}>
+                <View style={styles.headerCopy}>
+                  <Text variant="title" numberOfLines={2}>
+                    {ingredient.name}
                   </Text>
+                  {categoryName ? (
+                    <Text variant="caption" color="textSecondary">
+                      {categoryName}
+                    </Text>
+                  ) : null}
+                </View>
+
+                {!hideButtons ? (
+                  <View style={styles.actions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${ingredient.name}`}
+                      style={({ pressed }) => [
+                        styles.actionButton,
+                        pressed && styles.actionButtonPressed,
+                      ]}
+                      onPress={() => onEdit(ingredient)}
+                      disabled={isDeleting}
+                    >
+                      <UniSymbol
+                        name={{ ios: "pencil", android: "edit", web: "edit" }}
+                        size={16}
+                      />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${ingredient.name}`}
+                      style={({ pressed }) => [
+                        styles.actionButton,
+                        pressed && !isDeleting && styles.actionButtonPressed,
+                        isDeleting && styles.actionButtonDisabled,
+                      ]}
+                      onPress={handleDeletePress}
+                      disabled={isDeleting}
+                    >
+                      <UniDangerSymbol
+                        name={{
+                          ios: "trash",
+                          android: "delete",
+                          web: "delete",
+                        }}
+                        size={16}
+                      />
+                    </Pressable>
+                  </View>
                 ) : null}
               </View>
 
-              {!hideButtons ? (
-                <View style={styles.actions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${ingredient.name}`}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      pressed && styles.actionButtonPressed,
-                    ]}
-                    onPress={() => onEdit(ingredient)}
-                    disabled={isDeleting}
+              {ingredient.suppliers.length > 0 ? (
+                <>
+                  <ScrollView
+                    horizontal
+                    nestedScrollEnabled={Platform.OS === "android"}
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="always"
+                    style={styles.supplierPillsScroll}
+                    contentContainerStyle={styles.supplierPills}
                   >
-                    <UniSymbol
-                      name={{ ios: "pencil", android: "edit", web: "edit" }}
-                      size={16}
-                    />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Delete ${ingredient.name}`}
-                    style={({ pressed }) => [
-                      styles.actionButton,
-                      pressed && !isDeleting && styles.actionButtonPressed,
-                      isDeleting && styles.actionButtonDisabled,
-                    ]}
-                    onPress={handleDeletePress}
-                    disabled={isDeleting}
-                  >
-                    <UniDangerSymbol
-                      name={{ ios: "trash", android: "delete", web: "delete" }}
-                      size={16}
-                    />
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
+                    {suppliersForDisplay.map((supplier) => {
+                      const index = ingredient.suppliers.findIndex(
+                        (item) => item.id === supplier.id,
+                      );
+                      return (
+                        <Pill
+                          key={supplier.id}
+                          selected={selectedSupplierId === supplier.id}
+                          disabled={isSettingCalculationSupplier}
+                          onPress={() => setSelectedSupplierId(supplier.id)}
+                        >
+                          {supplierDisplayName(supplier, index)}
+                        </Pill>
+                      );
+                    })}
+                  </ScrollView>
 
-            {ingredient.suppliers.length > 0 ? (
-              <>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyboardShouldPersistTaps="always"
-                  contentContainerStyle={styles.supplierPills}
-                >
-                  {suppliersForDisplay.map((supplier) => {
-                    const index = ingredient.suppliers.findIndex(
-                      (item) => item.id === supplier.id,
-                    );
-                    return (
-                      <Pill
-                        key={supplier.id}
-                        selected={selectedSupplierId === supplier.id}
-                        disabled={isSettingCalculationSupplier}
-                        onPress={() => setSelectedSupplierId(supplier.id)}
-                      >
-                        {supplierDisplayName(supplier, index)}
-                      </Pill>
-                    );
-                  })}
-                </ScrollView>
-
-                {selectedSupplier ? (
-                  <Card style={styles.detailsCard}>
-                    <View style={styles.detailRow}>
-                      <Text color="textSecondary">Supplier</Text>
-                      <View style={styles.supplierValue}>
-                        <Text style={styles.detailValue} numberOfLines={1}>
-                          {supplierDisplayName(
-                            selectedSupplier,
-                            Math.max(
-                              0,
-                              ingredient.suppliers.findIndex(
-                                (item) => item.id === selectedSupplier.id,
+                  {selectedSupplier ? (
+                    <Card style={styles.detailsCard}>
+                      <View style={styles.detailRow}>
+                        <Text color="textSecondary">Supplier</Text>
+                        <View style={styles.supplierValue}>
+                          <Text style={styles.detailValue} numberOfLines={1}>
+                            {supplierDisplayName(
+                              selectedSupplier,
+                              Math.max(
+                                0,
+                                ingredient.suppliers.findIndex(
+                                  (item) => item.id === selectedSupplier.id,
+                                ),
                               ),
-                            ),
-                          )}
-                        </Text>
-                        {!isSelectedCalculationSupplier && !hideButtons ? (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Use this supplier for recipe costs"
-                            disabled={isSettingCalculationSupplier}
-                            hitSlop={8}
-                            style={({ pressed }) => [
-                              styles.setCalculationButton,
-                              pressed && styles.setCalculationButtonPressed,
-                              isSettingCalculationSupplier &&
-                                styles.setCalculationButtonDisabled,
-                            ]}
-                            onPress={() => void handleSetCalculationSupplier()}
-                          >
-                            <Text style={styles.setCalculationButtonLabel}>
-                              {isSettingCalculationSupplier
-                                ? "Setting…"
-                                : "Use this"}
-                            </Text>
-                          </Pressable>
-                        ) : null}
+                            )}
+                          </Text>
+                          {!isSelectedCalculationSupplier && !hideButtons ? (
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="Use this supplier for recipe costs"
+                              disabled={isSettingCalculationSupplier}
+                              hitSlop={8}
+                              style={({ pressed }) => [
+                                styles.setCalculationButton,
+                                pressed && styles.setCalculationButtonPressed,
+                                isSettingCalculationSupplier &&
+                                  styles.setCalculationButtonDisabled,
+                              ]}
+                              onPress={() =>
+                                void handleSetCalculationSupplier()
+                              }
+                            >
+                              <Text style={styles.setCalculationButtonLabel}>
+                                {isSettingCalculationSupplier
+                                  ? "Setting…"
+                                  : "Use this"}
+                              </Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
                       </View>
-                    </View>
-                    <DetailRow
-                      label="Pack size"
-                      value={formatSupplierPackSize(selectedSupplier)}
-                      withDivider
-                    />
-                    <DetailRow
-                      label="Pack price"
-                      value={`${symbol}${formatPrice(toNumber(selectedSupplier.itemPrice))}`}
-                      withDivider
-                    />
-                    <DetailRow
-                      label={`Usable cost per ${costUnitLabel(selectedSupplier.itemSizeUnit)}`}
-                      value={formatSupplierUsableCost(selectedSupplier, symbol)}
-                      withDivider
-                    />
-                  </Card>
-                ) : null}
-              </>
-            ) : (
-              <Text variant="caption" color="textSecondary">
-                No suppliers for this ingredient.
-              </Text>
-            )}
-          </>
-        ) : null}
-      </BottomSheetView>
-    </BottomSheetModal>
-    <Loader visible={isDeleting} text="Deleting ingredient..." />
+                      <DetailRow
+                        label="Pack size"
+                        value={formatSupplierPackSize(selectedSupplier)}
+                        withDivider
+                      />
+                      <DetailRow
+                        label="Pack price"
+                        value={`${symbol}${formatPrice(toNumber(selectedSupplier.itemPrice))}`}
+                        withDivider
+                      />
+                      <DetailRow
+                        label={`Usable cost per ${costUnitLabel(selectedSupplier.itemSizeUnit)}`}
+                        value={formatSupplierUsableCost(
+                          selectedSupplier,
+                          symbol,
+                        )}
+                        withDivider
+                      />
+                    </Card>
+                  ) : null}
+                </>
+              ) : (
+                <Text variant="caption" color="textSecondary">
+                  No suppliers for this ingredient.
+                </Text>
+              )}
+            </>
+          ) : null}
+        </BottomSheetView>
+      </BottomSheetModal>
+      <Loader visible={isDeleting} text="Deleting ingredient..." />
     </>
   );
 };
 
 const styles = StyleSheet.create((theme) => ({
   content: {
+    width: "100%",
     gap: theme.gap(2),
     // paddingHorizontal: theme.gap(3),
     paddingTop: theme.gap(1),
@@ -416,11 +429,16 @@ const styles = StyleSheet.create((theme) => ({
   actionButtonDisabled: {
     opacity: 0.5,
   },
+  supplierPillsScroll: {
+    flexGrow: 0,
+    width: "100%",
+    maxWidth: "100%",
+  },
   supplierPills: {
     flexDirection: "row",
     alignItems: "center",
     gap: theme.gap(1),
-    marginHorizontal: theme.gap(3),
+    paddingHorizontal: theme.gap(3),
   },
   setCalculationButton: {
     borderRadius: theme.borderRadius.md,
