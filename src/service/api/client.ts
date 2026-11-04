@@ -1,3 +1,7 @@
+import {
+  forceLogout,
+  shouldForceLogoutForUnauthorized,
+} from "@/service/session";
 import { useAuthStore } from "@/store";
 import { create } from "apisauce";
 
@@ -17,6 +21,15 @@ client.addAsyncRequestTransform((request) => async () => {
   if (token) {
     request.headers = request.headers || {};
     request.headers["Authorization"] = `Bearer ${token}`;
+  }
+});
+
+client.addMonitor((response) => {
+  const requestUrl = response.config?.url;
+  if (
+    shouldForceLogoutForUnauthorized(response.status, requestUrl)
+  ) {
+    forceLogout();
   }
 });
 
