@@ -5,6 +5,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, PinCode, showToast, Text } from "@/components/atoms";
 import { BackButton } from "@/components/molecules";
+import { getDeviceId } from "@/helpers";
 import { useAuth } from "@/provider/AuthProvider";
 import { redeemCode } from "@/service/api";
 import { useAccountUserStore, useCreateAccountStore } from "@/store";
@@ -26,8 +27,14 @@ const InviteCode = () => {
   const handleJoinTeam = async () => {
     if (code.length !== 6) return;
     try {
+      const deviceId = await getDeviceId();
+      if (!deviceId) {
+        showToast("Failed to get device ID", { variant: "error" });
+        return;
+      }
       const response = await redeemCode({
         code,
+        deviceId,
         fullName,
         username,
         password,

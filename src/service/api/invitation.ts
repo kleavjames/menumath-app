@@ -10,6 +10,7 @@ export interface CreateInvitationPayload {
 
 export interface RedeemCodePayload {
   code: string;
+  deviceId: string;
   fullName: string;
   username: string;
   password: string;
