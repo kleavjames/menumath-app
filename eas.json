@@ -8,8 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "APP_VERSION_IOS": "1.0.0",
-        "APP_VERSION_ANDROID": "1.0.0"
+        "APP_VERSION_IOS": "1.0.1",
+        "APP_VERSION_ANDROID": "1.0.1"
       }
     },
     "development-simulator": {
@@ -20,16 +20,16 @@
     },
     "preview": {
       "env": {
-        "APP_VERSION_IOS": "1.0.0",
-        "APP_VERSION_ANDROID": "1.0.0",
+        "APP_VERSION_IOS": "1.0.1",
+        "APP_VERSION_ANDROID": "1.0.1",
         "EXPO_PUBLIC_API_URL": "https://menumath-be.onrender.com"
       },
       "distribution": "internal"
     },
     "production": {
       "env": {
-        "APP_VERSION_IOS": "1.0.0",
-        "APP_VERSION_ANDROID": "1.0.0",
+        "APP_VERSION_IOS": "1.0.1",
+        "APP_VERSION_ANDROID": "1.0.1",
         "EXPO_PUBLIC_API_URL": "https://menumath-be.onrender.com"
       },
       "autoIncrement": true
