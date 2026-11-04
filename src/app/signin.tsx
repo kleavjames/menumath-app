@@ -6,6 +6,7 @@ import { StyleSheet } from "react-native-unistyles";
 
 import { Button, Loader, showToast, Text } from "@/components/atoms";
 import { TextInput } from "@/components/molecules";
+import { getDeviceId } from "@/helpers";
 import { useAuth } from "@/provider/AuthProvider";
 import { signIn } from "@/service/api";
 import { useAccountUserStore } from "@/store";
@@ -63,7 +64,13 @@ const SignIn = () => {
       return;
     }
     try {
-      const response = await signIn(username, password);
+      const deviceId = await getDeviceId();
+      if (!deviceId) {
+        showToast("Failed to get device ID", { variant: "error" });
+        setIsLoading(false);
+        return;
+      }
+      const response = await signIn(username, password, deviceId);
       login(response.accessToken);
       setAccountUser(response);
       showToast("Signed in successfully", { variant: "default" });

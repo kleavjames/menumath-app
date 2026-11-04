@@ -28,12 +28,17 @@ interface SignUpPayload {
   };
 }
 
-export const signIn = async (username: string, password: string) => {
+export const signIn = async (
+  username: string,
+  password: string,
+  deviceId: string,
+) => {
   const response = await client.post<AuthResponse | ApiErrorPayload>(
     "/auth/sign-in",
     {
       username,
       password,
+      deviceId,
     },
   );
 
