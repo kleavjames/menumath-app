@@ -20,6 +20,7 @@ interface SignUpPayload {
   fullName: string;
   username: string;
   password: string;
+  deviceId: string;
   business: {
     name: string;
     type: BusinessType;

@@ -20,6 +20,7 @@ import {
 } from "@/components/atoms";
 import { BackButton, SelectInput, TextInput } from "@/components/molecules";
 import { BUSINESS_TYPE_OPTIONS, CURRENCY_OPTIONS } from "@/constants";
+import { getDeviceId } from "@/helpers";
 import { useAuth } from "@/provider/AuthProvider";
 import { signUp } from "@/service/api";
 import { useAccountUserStore, useCreateAccountStore } from "@/store";
@@ -77,9 +78,16 @@ const CreateBusiness = () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      const deviceId = await getDeviceId();
+      if (!deviceId) {
+        showToast("Failed to get device ID", { variant: "error" });
+        setLoading(false);
+        return;
+      }
       const response = await signUp({
         fullName,
         username,
+        deviceId,
         password,
         business: {
           name: businessName,
